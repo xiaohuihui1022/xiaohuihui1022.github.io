@@ -489,7 +489,7 @@
 
         <!-- 顶部信息栏（只保留猜测次数徽章） -->
         <div class="top-bar">
-            <span class="attempt-badge" id="attemptBadge">第 1 / 8 次猜测</span>
+            <span class="attempt-badge" id="attemptBadge">第 1 / 4 次猜测</span>
         </div>
 
         <!-- 图例 -->
@@ -604,7 +604,7 @@
     ];
 
     // ==================== 游戏逻辑（已内联，双击即可运行） ====================
-    const MAX_ATTEMPTS = 8;
+    const MAX_ATTEMPTS = 4;
     let currentTarget = null;
     let guessHistory = [];
     let gameOver = false;
@@ -723,7 +723,7 @@
         document.getElementById('correctAnswer').style.display = 'block';
         document.getElementById('correctAnswer').innerHTML = `正确答案是：<br><strong>${target.name}</strong>`;
         document.getElementById('resultDetail').textContent =
-            isWin ? `你用了 ${guessHistory.length} / ${MAX_ATTEMPTS} 次就猜出了正确答案！` : '8 次机会都用完了，来看看正确答案吧！';
+            isWin ? `你用了 ${guessHistory.length} / ${MAX_ATTEMPTS} 次就猜出了正确答案！` : '4 次机会都用完了，来看看正确答案吧！';
         document.getElementById('btnAgain').style.display = 'inline-block';
         document.getElementById('btnContinue').style.display = 'inline-block';
         modal.classList.add('active');
