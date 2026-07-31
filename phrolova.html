@@ -365,6 +365,121 @@
         font-size: 12px;
         padding-bottom: 90px;
     }
+
+    /* ==================== 手机端适配（≤ 600px） ==================== */
+    @media (max-width: 600px) {
+        body {
+            padding: 12px 10px 120px;   /* 底部留出空间，避免被固定输入区遮挡 */
+        }
+
+        h1 {
+            font-size: 22px;
+        }
+
+        .subtitle {
+            font-size: 13px;
+            margin-bottom: 20px;
+        }
+
+        .top-bar {
+            padding: 10px 12px;
+            margin-bottom: 15px;
+        }
+
+        .attempt-badge {
+            font-size: 13px;
+            padding: 6px 12px;
+        }
+
+        .legend {
+            gap: 12px;
+            font-size: 12px;
+            margin-bottom: 15px;
+        }
+
+        /* 表格单元格缩小，保证横向滚动时更紧凑 */
+        .data-table {
+            font-size: 13px;
+        }
+
+        .data-table th, .data-table td {
+            padding: 9px 10px;
+        }
+
+        /* 让表格可横向滚动（已启用 overflow-x） */
+        .table-wrapper {
+            margin-bottom: 15px;
+        }
+
+        footer {
+            font-size: 11px;
+            padding-bottom: 20px;
+        }
+
+        /* 底部输入区：手机上改为多行紧凑布局 */
+        .bottom-input-area {
+            flex-wrap: wrap;
+            gap: 8px;
+            padding: 10px 12px calc(10px + env(safe-area-inset-bottom, 0px));
+        }
+
+        .autocomplete-wrap {
+            width: 100%;
+            order: -1;   /* 输入框放到第一行，占满整行 */
+            flex: 1 1 100%;
+        }
+
+        .autocomplete-wrap input {
+            font-size: 16px;   /* 避免 iOS 聚焦时自动放大 */
+            padding: 12px 14px;
+        }
+
+        .btn {
+            flex: 1;
+            padding: 12px 8px;
+            font-size: 15px;
+            min-width: 0;
+        }
+
+        /* 自动补全下拉在手机上稍微抬高 */
+        .autocomplete-list {
+            max-height: 200px;
+        }
+
+        .autocomplete-list .ac-item {
+            padding: 11px 12px;
+        }
+
+        .autocomplete-list .ac-suffix {
+            display: none;   /* 手机上隐藏 "Tab 补全" 提示，节省空间 */
+        }
+
+        /* 弹窗：手机上更紧凑，接近全屏 */
+        .modal {
+            width: 92%;
+            padding: 24px 18px;
+        }
+
+        .modal h2 {
+            font-size: 20px;
+        }
+
+        .modal .modal-actions {
+            gap: 10px;
+        }
+    }
+
+    /* 很窄的屏幕（≤ 380px）进一步微调 */
+    @media (max-width: 380px) {
+        .legend {
+            gap: 8px;
+            font-size: 11px;
+        }
+
+        .data-table th, .data-table td {
+            padding: 8px 8px;
+        }
+    }
     </style>
 </head>
 <body>
