@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>鸣潮角色猜谜游戏</title>
+    <link rel="shortcut icon" href="favicon.ico">
 
     <style>
     /* ==================== 样式（已内联，双击即可运行，无需加载外部文件） ==================== */
@@ -484,7 +485,8 @@
 </head>
 <body>
     <div class="container">
-        <h1>🎭 鸣潮角色猜谜游戏</h1>
+        <h1><img src="favicon.ico"></h1>
+        <h1>鸣潮角色猜谜游戏（单机版）</h1>
         <p class="subtitle">有 <strong>4</strong> 次机会猜出它，开始吧！</p>
 
         <!-- 顶部信息栏（只保留猜测次数徽章） -->
@@ -550,6 +552,10 @@
     <script>
     // ==================== 内置角色数据 ====================
     const CHARACTERS = [
+        { name: '漂泊者-衍射', attribute: '衍射', star_rating: 5, weapon: '迅刀', birthplace: '未知', version: 1.0 },
+        { name: '漂泊者-湮灭', attribute: '湮灭', star_rating: 5, weapon: '迅刀', birthplace: '未知', version: 1.0 },
+        { name: '漂泊者-气动', attribute: '气动', star_rating: 5, weapon: '迅刀', birthplace: '未知', version: 2.2 },
+        { name: '漂泊者-导电', attribute: '导电', star_rating: 5, weapon: '迅刀', birthplace: '未知', version: 3.5 },
         { name: '桃祈', attribute: '湮灭', star_rating: 4, weapon: '长刃', birthplace: '瑝珑', version: 1.0 },
         { name: '渊武', attribute: '导电', star_rating: 4, weapon: '臂铠', birthplace: '瑝珑', version: 1.0 },
         { name: '莫特斐', attribute: '热熔', star_rating: 4, weapon: '佩枪', birthplace: '新联邦', version: 1.0 },
