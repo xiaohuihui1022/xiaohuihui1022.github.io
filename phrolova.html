@@ -625,7 +625,7 @@
         if (targetVal == guessVal) return 'match';
         if (fieldName === 'star_rating') return 'near';
         if (fieldName === 'version') {
-            if (Math.abs(targetVal - guessVal) <= 0.2) return 'near';
+            if (Math.abs(targetVal - guessVal) <= 0.25) return 'near';
             return 'different';
         }
         return 'different';
