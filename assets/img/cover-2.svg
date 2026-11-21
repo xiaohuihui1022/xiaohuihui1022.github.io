@@ -1,0 +1,100 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 750" width="1200" height="750" preserveAspectRatio="xMidYMid slice" role="img" aria-label="薄荷色代码窗口封面插画">
+  <defs>
+    <linearGradient id="c2bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#e2f7f0" />
+      <stop offset="0.55" stop-color="#e7f0ff" />
+      <stop offset="1" stop-color="#f4e9ff" />
+    </linearGradient>
+    <linearGradient id="c2win" x1="0" y1="0" x2="0.4" y2="1">
+      <stop offset="0" stop-color="#ffffff" stop-opacity="0.98" />
+      <stop offset="1" stop-color="#f6fbff" stop-opacity="0.92" />
+    </linearGradient>
+    <linearGradient id="c2bar" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#7fd8c4" />
+      <stop offset="1" stop-color="#8fb9e9" />
+    </linearGradient>
+    <filter id="c2soft" x="-40%" y="-40%" width="180%" height="180%">
+      <feGaussianBlur stdDeviation="30" />
+    </filter>
+    <filter id="c2grain">
+      <feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="3" stitchTiles="stitch" />
+      <feColorMatrix type="saturate" values="0" />
+    </filter>
+  </defs>
+
+  <rect width="1200" height="750" fill="url(#c2bg)" />
+  <circle cx="200" cy="180" r="220" fill="#9ee7d3" opacity="0.3" filter="url(#c2soft)" />
+  <circle cx="1040" cy="600" r="240" fill="#b3a6f0" opacity="0.24" filter="url(#c2soft)" />
+
+  <!-- 点阵 -->
+  <g fill="#ffffff" opacity="0.75">
+    <g id="c2dots">
+      <circle cx="0" cy="0" r="3" />
+      <circle cx="44" cy="0" r="3" />
+      <circle cx="88" cy="0" r="3" />
+      <circle cx="132" cy="0" r="3" />
+      <circle cx="0" cy="44" r="3" />
+      <circle cx="44" cy="44" r="3" />
+      <circle cx="88" cy="44" r="3" />
+      <circle cx="132" cy="44" r="3" />
+      <circle cx="0" cy="88" r="3" />
+      <circle cx="44" cy="88" r="3" />
+      <circle cx="88" cy="88" r="3" />
+      <circle cx="132" cy="88" r="3" />
+    </g>
+    <use href="#c2dots" x="880" y="90" opacity="0.7" />
+    <use href="#c2dots" x="60" y="500" opacity="0.55" />
+  </g>
+
+  <!-- 主窗口 -->
+  <g transform="translate(300 190) rotate(-3)">
+    <rect x="0" y="0" width="600" height="380" rx="26" fill="#cfe6ef" opacity="0.35" transform="translate(12 18)" />
+    <rect x="0" y="0" width="600" height="380" rx="26" fill="url(#c2win)" stroke="#e2eef7" stroke-width="2" />
+    <rect x="0" y="0" width="600" height="52" rx="26" fill="#f7fbff" />
+    <rect x="0" y="40" width="600" height="14" fill="#f7fbff" />
+    <circle cx="34" cy="26" r="7" fill="#f7b2c4" />
+    <circle cx="58" cy="26" r="7" fill="#ffd9a0" />
+    <circle cx="82" cy="26" r="7" fill="#a8e6cf" />
+    <rect x="120" y="20" width="150" height="12" rx="6" fill="#e8f1f8" />
+
+    <!-- 代码行 -->
+    <g transform="translate(44 92)" fill="none" stroke-linecap="round">
+      <rect x="0" y="0" width="210" height="13" rx="6.5" fill="#a8e6cf" opacity="0.75" stroke="none" />
+      <rect x="30" y="32" width="120" height="13" rx="6.5" fill="#bcd4f5" opacity="0.85" stroke="none" />
+      <rect x="30" y="64" width="250" height="13" rx="6.5" fill="#e3d4fb" opacity="0.9" stroke="none" />
+      <rect x="60" y="96" width="170" height="13" rx="6.5" fill="#ffe0e8" opacity="0.9" stroke="none" />
+      <rect x="60" y="128" width="210" height="13" rx="6.5" fill="#cdeee3" opacity="0.85" stroke="none" />
+      <rect x="30" y="160" width="90" height="13" rx="6.5" fill="#bcd4f5" opacity="0.8" stroke="none" />
+      <rect x="30" y="192" width="240" height="13" rx="6.5" fill="#efe6fb" opacity="0.95" stroke="none" />
+      <rect x="0" y="224" width="130" height="13" rx="6.5" fill="#a8e6cf" opacity="0.7" stroke="none" />
+    </g>
+    <path d="M470 96h74a10 10 0 0 1 10 10v74a10 10 0 0 1-10 10h-74" fill="none" stroke="#d9ecf7" stroke-width="3" stroke-dasharray="8 10" stroke-linecap="round" />
+  </g>
+
+  <!-- 浮动小卡片 -->
+  <g transform="translate(120 470) rotate(-8)">
+    <rect x="0" y="0" width="200" height="120" rx="20" fill="#ffffff" opacity="0.92" stroke="#e6f2fa" stroke-width="2" />
+    <rect x="24" y="28" width="70" height="11" rx="5.5" fill="#8fd8c4" opacity="0.8" />
+    <rect x="24" y="52" width="130" height="9" rx="4.5" fill="#dbe9f7" />
+    <rect x="24" y="74" width="96" height="9" rx="4.5" fill="#e9defa" />
+  </g>
+  <g transform="translate(920 470) rotate(7)">
+    <rect x="0" y="0" width="170" height="150" rx="20" fill="#ffffff" opacity="0.9" stroke="#ecf3fb" stroke-width="2" />
+    <circle cx="52" cy="56" r="20" fill="#c7eee2" />
+    <rect x="24" y="96" width="112" height="9" rx="4.5" fill="#dbe9f7" />
+    <rect x="24" y="116" width="76" height="9" rx="4.5" fill="#e9defa" />
+  </g>
+
+  <!-- 装饰符号 -->
+  <g font-family="Quicksand, Consolas, monospace" font-weight="700" fill="#8fb9e9" opacity="0.5">
+    <text x="200" y="150" font-size="72">{</text>
+    <text x="980" y="290" font-size="56">}</text>
+  </g>
+
+  <g fill="#f6b8c9" opacity="0.85">
+    <path d="M1020 130c7-4 13 2 10 8-3 6-10 6-13 1-2-4 0-7 3-9Z" />
+    <path d="M170 330c6-4 11 1 9 7-2 5-9 5-11 1-2-3 0-6 2-8Z" opacity="0.7" />
+  </g>
+
+  <rect width="1200" height="750" filter="url(#c2grain)" opacity="0.06" />
+</svg>

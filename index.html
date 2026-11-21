@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="zh-CN" data-mode="light">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="color-scheme" content="light dark" />
+<meta name="theme-color" content="#fbf7f5" media="(prefers-color-scheme: light)" />
+<meta name="theme-color" content="#1c1a22" media="(prefers-color-scheme: dark)" />
+<title>晴天小站</title>
+<meta name="description" content="一个安静的个人博客。" />
+<meta property="og:type" content="website" />
+<meta property="og:title" content="晴天小站" />
+<link rel="icon" href="assets/img/favicon.svg" type="image/svg+xml" />
+<link rel="apple-touch-icon" href="assets/img/avatar.svg" />
+<link rel="preload" href="assets/fonts/quicksand-latin.woff2" as="font" type="font/woff2" crossorigin />
+<link rel="stylesheet" href="assets/css/style.css" />
+<script type="module" src="assets/js/app.js"></script>
+<script>
+  /* 在首帧之前恢复上次的主题，避免白闪 */
+  (function () {
+    var d = document.documentElement;
+    try {
+      var boot = JSON.parse(localStorage.getItem("blog.boot") || "null");
+      if (boot) {
+        if (boot.mode) d.dataset.mode = boot.mode;
+        if (boot.preset) d.dataset.preset = boot.preset;
+        if (boot.font) d.dataset.font = boot.font;
+        if (boot.css) d.setAttribute("style", boot.css);
+        if (boot.noPetals) d.classList.add("no-petals");
+        return;
+      }
+    } catch (e) {}
+    try {
+      var forced = JSON.parse(localStorage.getItem("blog.mode") || "null");
+      var dark = forced
+        ? forced === "dark"
+        : window.matchMedia("(prefers-color-scheme: dark)").matches;
+      d.dataset.mode = dark ? "dark" : "light";
+    } catch (e) {}
+  })();
+</script>
+</head>
+<body>
+  <div class="decor" aria-hidden="true">
+    <span class="blob blob-a"></span>
+    <span class="blob blob-b"></span>
+    <span class="blob blob-c"></span>
+    <span class="grain"></span>
+  </div>
+  <canvas id="petals" aria-hidden="true"></canvas>
+
+  <a class="skip" href="#app">跳到正文</a>
+
+  <header class="site-head" id="site-head">
+    <div class="head-in">
+      <a class="brand" href="#/" aria-label="回到首页">
+        <img class="brand-avatar" id="brand-avatar" src="assets/img/avatar.svg" alt="" width="40" height="40" />
+        <span class="brand-text">
+          <b id="brand-title">晴天小站</b>
+          <i id="brand-sub">把喜欢的事，慢慢写下来</i>
+        </span>
+      </a>
+      <nav class="nav" id="nav" aria-label="主导航"></nav>
+      <div class="head-actions" id="head-actions"></div>
+    </div>
+    <div class="read-bar" id="read-bar" aria-hidden="true"><i></i></div>
+  </header>
+
+  <main class="app" id="app">
+    <div class="boot">
+      <span class="boot-dot"></span>
+      <p>正在翻开这一页…</p>
+    </div>
+  </main>
+
+  <footer class="site-foot" id="site-foot">
+    <div class="foot-in">
+      <div class="foot-orn" aria-hidden="true">✦</div>
+      <p class="foot-line" id="foot-line"></p>
+      <div class="foot-links" id="foot-links"></div>
+    </div>
+  </footer>
+
+  <div class="search-layer" id="search-layer" hidden>
+    <div class="search-panel" role="dialog" aria-modal="true" aria-label="搜索文章">
+      <div class="search-field">
+        <svg class="i" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.6-3.6"/></svg>
+        <input id="search-input" type="search" placeholder="搜索标题、标签或正文…" autocomplete="off" spellcheck="false" />
+        <kbd>Esc</kbd>
+      </div>
+      <div class="search-hint" id="search-hint"></div>
+      <div class="search-results" id="search-results"></div>
+    </div>
+  </div>
+
+  <div class="toast-root" id="toast-root" aria-live="polite"></div>
+
+  <noscript>
+    <div class="noscript">这个小站需要 JavaScript 才能翻开。请打开浏览器脚本后刷新。</div>
+  </noscript>
+</body>
+</html>

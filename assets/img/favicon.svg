@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <defs>
+    <linearGradient id="fbg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#ffdfe9" />
+      <stop offset="0.6" stop-color="#eee1ff" />
+      <stop offset="1" stop-color="#dcf3f2" />
+    </linearGradient>
+  </defs>
+  <rect width="64" height="64" rx="16" fill="url(#fbg)" />
+  <path d="M20 27l-1.4-11c-.2-2.6 2.6-4.2 4.6-2.6l8 6Z" fill="#fffdfc" stroke="#f0d9e3" stroke-width="1.2" />
+  <path d="M40 25l6-8.6c1.6-2.2 4.8-1.6 5.2 1l.8 11Z" fill="#fffdfc" stroke="#f0d9e3" stroke-width="1.2" />
+  <circle cx="32" cy="38" r="17" fill="#fffdfc" stroke="#f0d9e3" stroke-width="1.2" />
+  <path d="M24 36.4c1.8 2.2 4.6 2.2 6.4 0" fill="none" stroke="#6b5a68" stroke-width="1.9" stroke-linecap="round" />
+  <path d="M35 36.4c1.8 2.2 4.6 2.2 6.4 0" fill="none" stroke="#6b5a68" stroke-width="1.9" stroke-linecap="round" />
+  <ellipse cx="22" cy="42" rx="3.4" ry="2.3" fill="#f9aec1" opacity="0.65" />
+  <ellipse cx="42" cy="42" rx="3.4" ry="2.3" fill="#f9aec1" opacity="0.65" />
+  <path d="M30.2 42.6h3.6l-1.8 2.2Z" fill="#e79aae" />
+</svg>

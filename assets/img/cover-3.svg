@@ -1,0 +1,88 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 750" width="1200" height="750" preserveAspectRatio="xMidYMid slice" role="img" aria-label="咖啡与小植物的封面插画">
+  <defs>
+    <linearGradient id="c3bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#fff5e8" />
+      <stop offset="0.5" stop-color="#ffe8dd" />
+      <stop offset="1" stop-color="#f6e6ff" />
+    </linearGradient>
+    <linearGradient id="c3cup" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ffffff" />
+      <stop offset="1" stop-color="#fdf0e8" />
+    </linearGradient>
+    <linearGradient id="c3coffee" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#b9805f" />
+      <stop offset="1" stop-color="#8d5b42" />
+    </linearGradient>
+    <linearGradient id="c3leaf" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#a8dfc6" />
+      <stop offset="1" stop-color="#7cc9ad" />
+    </linearGradient>
+    <filter id="c3soft" x="-40%" y="-40%" width="180%" height="180%">
+      <feGaussianBlur stdDeviation="28" />
+    </filter>
+    <filter id="c3grain">
+      <feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="3" stitchTiles="stitch" />
+      <feColorMatrix type="saturate" values="0" />
+    </filter>
+  </defs>
+
+  <rect width="1200" height="750" fill="url(#c3bg)" />
+  <circle cx="940" cy="180" r="150" fill="#ffe6b8" opacity="0.55" filter="url(#c3soft)" />
+  <circle cx="220" cy="600" r="220" fill="#f3d9ff" opacity="0.35" filter="url(#c3soft)" />
+
+  <!-- 桌面 -->
+  <path d="M0 600h1200v150H0Z" fill="#f8e2d2" opacity="0.7" />
+  <path d="M0 600h1200" stroke="#f0cdb8" stroke-width="3" opacity="0.8" />
+
+  <!-- 太阳光点 -->
+  <g fill="#fff8ea" opacity="0.8">
+    <circle cx="1000" cy="110" r="4" />
+    <circle cx="1050" cy="180" r="2.6" />
+    <circle cx="960" cy="230" r="3" />
+  </g>
+
+  <!-- 小植物 -->
+  <g transform="translate(180 430)">
+    <path d="M60 170c0-46 0-70-10-96" stroke="#8ecfb6" stroke-width="5" fill="none" stroke-linecap="round" />
+    <path d="M50 96c-36-6-54-30-52-58 30-4 54 12 60 40" fill="url(#c3leaf)" />
+    <path d="M56 120c34-10 48-34 44-62-30 0-52 18-56 44" fill="url(#c3leaf)" opacity="0.9" />
+    <path d="M54 74c-18-20-20-44-8-62 18 10 26 32 22 54" fill="#b9e8d5" opacity="0.95" />
+    <path d="M22 168h76l-10 62a10 10 0 0 1-10 9H42a10 10 0 0 1-10-9Z" fill="#f2b6a6" />
+    <rect x="16" y="158" width="88" height="18" rx="9" fill="#f8c9bb" />
+  </g>
+
+  <!-- 咖啡杯 -->
+  <g transform="translate(560 330)">
+    <ellipse cx="140" cy="250" rx="150" ry="26" fill="#eccdb9" opacity="0.55" />
+    <path d="M300 96c42 0 56 24 56 48s-16 46-56 46" fill="none" stroke="#ffffff" stroke-width="22" stroke-linecap="round" />
+    <path d="M300 96c42 0 56 24 56 48s-16 46-56 46" fill="none" stroke="#f6ddd0" stroke-width="9" stroke-linecap="round" />
+    <path d="M20 40h244v146a56 56 0 0 1-56 56H76a56 56 0 0 1-56-56Z" fill="url(#c3cup)" stroke="#f4dbcd" stroke-width="3" />
+    <ellipse cx="142" cy="44" rx="122" ry="26" fill="#ffffff" />
+    <ellipse cx="142" cy="44" rx="104" ry="20" fill="url(#c3coffee)" />
+    <ellipse cx="116" cy="40" rx="30" ry="8" fill="#d8a98d" opacity="0.55" />
+    <path d="M60 110c14 22 14 46 0 68" stroke="#f7e3d7" stroke-width="7" fill="none" stroke-linecap="round" opacity="0.9" />
+    <!-- 拉花心形 -->
+    <path d="M142 34c6-8 18-4 16 6-2 8-12 12-16 16-4-4-14-8-16-16-2-10 10-14 16-6Z" fill="#f6e3d6" opacity="0.95" />
+    <!-- 热气 -->
+    <g stroke="#e7cdbe" stroke-width="6" fill="none" stroke-linecap="round" opacity="0.85">
+      <path d="M96 4c-14-16 12-26 0-44" />
+      <path d="M142-8c-14-18 14-30 0-50" />
+      <path d="M188 4c-14-16 12-26 0-44" />
+    </g>
+  </g>
+
+  <!-- 书本 -->
+  <g transform="translate(86 560) rotate(-4)">
+    <rect x="0" y="0" width="150" height="26" rx="8" fill="#f7c0cd" />
+    <rect x="8" y="-24" width="136" height="24" rx="8" fill="#cdbdf2" />
+    <rect x="18" y="-46" width="118" height="22" rx="8" fill="#a8e0cc" />
+  </g>
+
+  <!-- 花瓣 -->
+  <g fill="#f4a6bd" opacity="0.6">
+    <path d="M1020 400c10-6 18 2 14 12-4 8-14 8-18 2-2-6 0-10 4-14Z" />
+    <path d="M380 180c7-4 13 2 10 8-3 6-10 6-13 1-2-4 0-7 3-9Z" opacity="0.75" />
+  </g>
+
+  <rect width="1200" height="750" filter="url(#c3grain)" opacity="0.06" />
+</svg>

@@ -1,0 +1,75 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 750" width="1200" height="750" preserveAspectRatio="xMidYMid slice" role="img" aria-label="夜色与山丘的封面插画">
+  <defs>
+    <linearGradient id="c1sky" x1="0" y1="0" x2="0.9" y2="1">
+      <stop offset="0" stop-color="#ffe1ea" />
+      <stop offset="0.45" stop-color="#f4e4ff" />
+      <stop offset="1" stop-color="#dff0f6" />
+    </linearGradient>
+    <linearGradient id="c1hill1" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#c9b6ee" stop-opacity="0.85" />
+      <stop offset="1" stop-color="#b6a3e2" stop-opacity="0.55" />
+    </linearGradient>
+    <linearGradient id="c1hill2" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#f6a9c0" stop-opacity="0.9" />
+      <stop offset="1" stop-color="#f7c4d4" stop-opacity="0.6" />
+    </linearGradient>
+    <radialGradient id="c1moon" cx="0.35" cy="0.3" r="0.8">
+      <stop offset="0" stop-color="#fffdf6" />
+      <stop offset="1" stop-color="#ffe7bf" />
+    </radialGradient>
+    <filter id="c1soft" x="-40%" y="-40%" width="180%" height="180%">
+      <feGaussianBlur stdDeviation="26" />
+    </filter>
+    <filter id="c1grain">
+      <feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="3" stitchTiles="stitch" />
+      <feColorMatrix type="saturate" values="0" />
+    </filter>
+  </defs>
+
+  <rect width="1200" height="750" fill="url(#c1sky)" />
+  <circle cx="880" cy="170" r="230" fill="#ffffff" opacity="0.32" filter="url(#c1soft)" />
+  <circle cx="250" cy="560" r="260" fill="#c9b6ee" opacity="0.22" filter="url(#c1soft)" />
+
+  <!-- 星星 -->
+  <g fill="#fffaf2">
+    <path d="M240 130c2.6 9 5 11.4 14 14-9 2.6-11.4 5-14 14-2.6-9-5-11.4-14-14 9-2.6 11.4-5 14-14Z" opacity="0.9" />
+    <path d="M420 90c1.8 6.2 3.4 7.8 9.6 9.6-6.2 1.8-7.8 3.4-9.6 9.6-1.8-6.2-3.4-7.8-9.6-9.6 6.2-1.8 7.8-3.4 9.6-9.6Z" opacity="0.7" />
+    <path d="M1010 320c2 7 3.8 8.8 10.8 10.8-7 2-8.8 3.8-10.8 10.8-2-7-3.8-8.8-10.8-10.8 7-2 8.8-3.8 10.8-10.8Z" opacity="0.75" />
+  </g>
+  <g fill="#e9d9ff">
+    <circle cx="150" cy="240" r="4" opacity="0.8" />
+    <circle cx="330" cy="200" r="2.6" opacity="0.6" />
+    <circle cx="560" cy="120" r="3.4" opacity="0.7" />
+    <circle cx="700" cy="210" r="2.4" opacity="0.55" />
+    <circle cx="1100" cy="150" r="3" opacity="0.6" />
+    <circle cx="960" cy="470" r="2.6" opacity="0.5" />
+  </g>
+
+  <!-- 月亮 -->
+  <circle cx="880" cy="190" r="96" fill="url(#c1moon)" />
+  <circle cx="852" cy="168" r="16" fill="#f9dfb2" opacity="0.55" />
+  <circle cx="906" cy="206" r="10" fill="#f9dfb2" opacity="0.4" />
+  <circle cx="872" cy="222" r="6" fill="#f9dfb2" opacity="0.35" />
+
+  <!-- 山丘 -->
+  <path d="M0 620c160-90 280-120 420-84 150 38 250 12 360-40 180-84 310-40 420 30v224H0Z" fill="url(#c1hill1)" />
+  <path d="M0 690c140-70 260-96 380-64 130 34 230 6 330-36 170-72 320-24 490 60v100H0Z" fill="url(#c1hill2)" opacity="0.95" />
+
+  <!-- 小房子 -->
+  <g transform="translate(300 560)" opacity="0.9">
+    <rect x="0" y="18" width="62" height="46" rx="6" fill="#fffdfc" />
+    <path d="M-8 20 31-10 70 20Z" fill="#f7b8cc" />
+    <rect x="24" y="36" width="14" height="28" rx="3" fill="#e8d7f8" />
+    <rect x="8" y="30" width="10" height="10" rx="2.5" fill="#ffe6b8" />
+    <rect x="44" y="30" width="10" height="10" rx="2.5" fill="#ffe6b8" />
+  </g>
+
+  <!-- 花瓣 -->
+  <g fill="#f28fab" opacity="0.6">
+    <path d="M180 420c10-6 18 2 14 12-4 8-14 8-18 2-2-6 0-10 4-14Z" />
+    <path d="M600 360c8-5 14 2 11 9-3 7-11 7-14 1-2-4 0-8 3-10Z" opacity="0.8" />
+    <path d="M1020 560c9-5 16 2 12 11-4 7-13 7-16 1-2-5 0-9 4-12Z" opacity="0.55" />
+  </g>
+
+  <rect width="1200" height="750" filter="url(#c1grain)" opacity="0.06" />
+</svg>
