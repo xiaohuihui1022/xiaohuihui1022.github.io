@@ -51,6 +51,8 @@ export class GitHub {
 
   async api(path, opts = {}) {
     const res = await fetch(`https://api.github.com${path}`, {
+      // 禁止浏览器缓存：写操作前读到的 sha 必须是仓库当前的状态
+      cache: "no-store",
       ...opts,
       headers: {
         Accept: "application/vnd.github+json",
@@ -84,7 +86,13 @@ export class GitHub {
         );
       }
       if (res.status === 404) throw new GitHubError(404, `找不到 ${this.slug}，或者这个令牌没有该仓库的访问权限`, data);
-      if (res.status === 409) throw new GitHubError(409, "仓库内容已被别处修改，请刷新后重试", data);
+      if (res.status === 409) {
+        const hint = /protected/i.test(msg)
+          ? "分支有保护规则，不允许直接提交。到 Settings → Branches 关掉 Require a pull request，或允许直接 push"
+          : "提交时带的文件版本和仓库里的对不上";
+        throw new GitHubError(409, `${hint}（GitHub: ${msg}）`, data);
+      }
+      if (res.status === 422) throw new GitHubError(422, `GitHub 拒绝了这次提交：${msg}`, data);
       throw new GitHubError(res.status, msg, data);
     }
     return data;

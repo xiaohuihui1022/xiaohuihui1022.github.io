@@ -27,6 +27,7 @@ const repo = {
 const shas = { "content/posts.json": "sha-posts-1" };
 let shaSeq = 0;
 let denyToken = false;
+let fail409Once = false;
 const commits = [];
 
 const errors = [];
@@ -150,6 +151,10 @@ async function main() {
         });
       }
       if (method === "PUT") {
+        if (fail409Once) {
+          fail409Once = false;
+          return json(409, { message: "sha does not match [given: old-sha, expected: new-sha]" });
+        }
         const body = JSON.parse(req.postData() || "{}");
         repo[file] = unb64(body.content || "");
         shaSeq++;
@@ -297,13 +302,15 @@ async function main() {
   step("预览支持表格", (await page.locator("#md-preview-body table").count()) === 1);
   await shot("10-admin-editor.png");
 
-  // 选「发布」再保存
+  // 选「发布」再保存；故意让第一次 PUT 返回 409，验证会自动重新取 sha 再提交
   await page.click('#e-status [data-draft="false"]');
+  fail409Once = true;
   await page.click('[data-act="save-post"]');
-  await page.waitForTimeout(1800);
+  await page.waitForTimeout(2200);
   const savedPosts = JSON.parse(repo["content/posts.json"] || "{}");
   const created = (savedPosts.posts || []).find((p) => p.title === "测试文章：来自自动化检查");
   step("保存后文章写入 posts.json", Boolean(created), `${commits.length} 次提交`);
+  step("遇到 409 会自动重试成功", Boolean(created));
   step("提交信息可读", commits.some((c) => c.message.includes("测试文章")));
 
   /* ---------------------------------------------------------- 安全 */

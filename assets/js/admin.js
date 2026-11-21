@@ -294,10 +294,8 @@ function renderSetup() {
       S.site.admin.auth = auth;
       S.site.updatedAt = new Date().toISOString();
 
-      let sha = "";
       try {
         const file = await gh.getFile(REPO_FILE);
-        sha = file.sha;
         // 以仓库里的内容为准，避免覆盖别处的修改
         const remote = JSON.parse(file.text || "{}");
         S.site = { ...remote, admin: { ...(remote.admin || {}), repo: { owner, name, branch }, auth } };
@@ -305,7 +303,7 @@ function renderSetup() {
         if (!(e instanceof GitHubError) || e.status !== 404) throw e;
       }
 
-      await gh.putFile(REPO_FILE, JSON.stringify(S.site, null, 2) + "\n", "初始化控制台与管理员密码", sha);
+      await putFileWithRetry(gh, REPO_FILE, JSON.stringify(S.site, null, 2) + "\n", "初始化控制台与管理员密码");
       S.sha[REPO_FILE] = "";
 
       store.set(TOKEN_KEY, token);
@@ -1491,6 +1489,28 @@ function commitMessage() {
   return "更新内容";
 }
 
+/* 提交文件：写之前总是重新读一次 sha，遇到 409 再读一次重试。
+   GitHub API 的 GET 会被浏览器缓存（max-age=60），复用缓存里的旧 sha 会导致一直 409。 */
+async function putFileWithRetry(gh, path, text, message) {
+  const shaNow = async () => {
+    try {
+      return (await gh.getFile(path)).sha;
+    } catch (e) {
+      if (e instanceof GitHubError && e.status === 404) return "";
+      throw e;
+    }
+  };
+
+  try {
+    return await gh.putFile(path, text, message, await shaNow());
+  } catch (e) {
+    if (!(e instanceof GitHubError) || e.status !== 409) throw e;
+    // 等一下再取一次，避开 GitHub 写入后的短暂不一致
+    await new Promise((r) => setTimeout(r, 700));
+    return await gh.putFile(path, text, message, await shaNow());
+  }
+}
+
 async function saveAll() {
   if (S.busy) return;
   if (!S.gh) {
@@ -1521,16 +1541,7 @@ async function saveAll() {
 
   try {
     for (const job of jobs) {
-      // 没拿到 sha（首次创建）时先探测一次
-      if (!S.sha[job.path]) {
-        try {
-          const f = await S.gh.getFile(job.path);
-          S.sha[job.path] = f.sha;
-        } catch (e) {
-          if (!(e instanceof GitHubError) || e.status !== 404) throw e;
-        }
-      }
-      const res = await S.gh.putFile(job.path, job.text, job.message, S.sha[job.path]);
+      const res = await putFileWithRetry(S.gh, job.path, job.text, job.message);
       S.sha[job.path] = res?.content?.sha || "";
     }
 
@@ -1546,7 +1557,7 @@ async function saveAll() {
       renderTab();
     }
   } catch (e) {
-    toast(e instanceof GitHubError ? e.message : e.message || "提交失败", "err");
+    toast(e?.message || "提交失败", "err");
     console.error(e);
   } finally {
     S.busy = false;
