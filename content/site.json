@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updatedAt": "2026-11-21T11:36:43.286Z",
+  "updatedAt": "2026-11-21T12:10:25.085Z",
   "site": {
     "title": "灰灰的小站",
     "subtitle": "把喜欢的事，慢慢写下来",
@@ -70,5 +70,13 @@
       "hash": "LnuSMB0zFHVCMBg7m+CZWjwOXnrZpAL/GYPZidYrAmg=",
       "createdAt": "2026-11-21T11:17:15.183Z"
     }
+  },
+  "music": {
+    "songs": [],
+    "enabled": true,
+    "title": "The Best",
+    "desc": "好听(OuO)",
+    "playlistId": "7384210991",
+    "embed": true
   }
 }
