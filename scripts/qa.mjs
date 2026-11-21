@@ -169,7 +169,7 @@ async function main() {
   step("置顶文章出现在头条", hasFeatured === 1);
 
   const pageTitle = await page.title();
-  step("页面标题来自配置", pageTitle.includes("晴天小站"), pageTitle);
+  step("页面标题来自配置", pageTitle.includes("灰灰的小站"), pageTitle);
 
   await shot("01-home-light.png");
 

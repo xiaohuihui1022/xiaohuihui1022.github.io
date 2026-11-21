@@ -1,0 +1,8 @@
+# 统一换行符，避免 Windows 上提交时出现整文件 diff
+* text=auto eol=lf
+
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.woff2 binary
+*.ico binary

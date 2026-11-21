@@ -1,4 +1,4 @@
-# 晴天小站
+# 灰灰的小站
 
 一个可以直接部署到 **GitHub Pages** 的静态博客：可爱但克制的樱花主题、自带密码保护的控制面板，写文章和调主题都在浏览器里完成。
 
@@ -17,19 +17,28 @@
 
 ---
 
-## 三分钟部署
+## 你的仓库
 
-### 1. 建仓库，把文件放进去
+| | |
+| --- | --- |
+| 仓库 | `xiaohuihui1022/xiaohuihui1022.github.io` |
+| 站点地址 | <https://xiaohuihui1022.github.io/> |
+| 控制台 | <https://xiaohuihui1022.github.io/#/admin> |
+| 分支 | `main` |
 
-新建一个 **public** 仓库（GitHub Pages 免费版只支持公开仓库），把本目录所有文件推上去：
+> 仓库名就是 `xiaohuihui1022.github.io`，所以它是「用户主页」，站点发布在域名根目录，不是 `/<仓库名>/` 子路径。
+
+## 部署
+
+### 1. 把文件推上去
+
+仓库已经关联好了，直接推就行：
 
 ```bash
-git remote add origin https://github.com/<你的用户名>/<仓库名>.git
-git branch -M main
 git push -u origin main
 ```
 
-不会用命令行也行：在仓库页面点 *Add file → Upload files*，把文件拖进去提交。
+> 换成另一台电脑时，才需要先 `git remote add origin https://github.com/xiaohuihui1022/xiaohuihui1022.github.io.git`。
 
 ### 2. 打开 GitHub Pages
 
@@ -38,20 +47,18 @@ git push -u origin main
 - **Source** 选 `Deploy from a branch`
 - **Branch** 选 `main`，目录选 `/ (root)`，保存
 
-等 1 分钟左右，访问 `https://<你的用户名>.github.io/<仓库名>/`，应该就能看到博客了。
-
-> 如果你的仓库名就叫 `<用户名>.github.io`，地址是 `https://<用户名>.github.io/`，两种都能正常工作。
+等 1 分钟左右，访问 <https://xiaohuihui1022.github.io/> 就能看到博客了。
 
 ### 3. 初始化控制台
 
-打开 `https://<你的用户名>.github.io/<仓库名>/#/admin`（也可以点页脚的「控制台」）。
+打开 <https://xiaohuihui1022.github.io/#/admin>（也可以点页脚的「控制台」）。
 
 第一次进去会让你做两件事：**设置管理员密码**，以及**填一个 GitHub 访问令牌**。
 
 令牌是这么来的：
 
 1. 打开 <https://github.com/settings/personal-access-tokens/new>
-2. **Repository access** 选 *Only select repositories*，选中刚建的这个博客仓库
+2. **Repository access** 选 *Only select repositories*，选中 `xiaohuihui1022.github.io`
 3. **Permissions → Repository permissions → Contents** 设为 **Read and write**
 4. 生成后复制那串 `github_pat_...`（只显示一次）
 
@@ -176,7 +183,7 @@ node scripts/qa.mjs   # 加 QA_MODE=playwright 可让 Playwright 直接启动浏
 GitHub Pages 一般 30–60 秒。没生效就等一会儿，或者强制刷新（`Ctrl/⌘ + Shift + R`）。
 
 **可以绑定自己的域名吗？**
-可以。仓库 Settings → Pages → Custom domain 填域名，然后在域名服务商加一条 CNAME 指向 `<用户名>.github.io`。这个站所有路径都是相对的，换域名不用改代码。
+可以。仓库 Settings → Pages → Custom domain 填域名，然后在域名服务商加一条 CNAME 指向 `xiaohuihui1022.github.io`。这个站所有路径都是相对的，换域名不用改代码。
 
 **文章存在哪？会不会丢？**
 存在 `content/posts.json`，跟着 Git 走。每次保存都是一次提交，历史版本永远能翻回来。
