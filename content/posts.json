@@ -1,20 +1,5 @@
 {
   "version": 1,
-  "updatedAt": "2026-11-21T11:37:13.340Z",
-  "posts": [
-    {
-      "id": "p_draft",
-      "slug": "untitled-draft",
-      "title": "还没想好标题",
-      "date": "2026-11-20",
-      "tags": [
-        "草稿"
-      ],
-      "cover": "",
-      "excerpt": "",
-      "pinned": false,
-      "draft": true,
-      "body": "（还没想好，先存个草稿。）\n\n## 想写的东西\n\n- 关于「完成」比「完美」重要\n- 一些被我改了三遍的 CSS\n- 今年的读书清单"
-    }
-  ]
+  "updatedAt": "2026-11-21T11:37:17.269Z",
+  "posts": []
 }
