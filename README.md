@@ -182,6 +182,15 @@ node scripts/qa.mjs   # 加 QA_MODE=playwright 可让 Playwright 直接启动浏
 **改了内容多久生效？**
 GitHub Pages 一般 30–60 秒。没生效就等一会儿，或者强制刷新（`Ctrl/⌘ + Shift + R`）。
 
+**填令牌时提示 `Resource not accessible by personal access token`？**
+说明令牌权限不够。检查两处：
+
+1. **Repository access** 要选 *Only select repositories* 并勾上 `xiaohuihui1022.github.io`。
+   默认的 *Public repositories (read-only)* 只能读，写不了。
+2. **Permissions → Repository permissions → Contents** 要选 **Read and write**，下拉默认是 **Read-only**。
+
+改完权限以后**必须重新生成令牌**——已经发出去的令牌不会自动升级权限。换上新令牌再点一次「验证并进入」就好。
+
 **可以绑定自己的域名吗？**
 可以。仓库 Settings → Pages → Custom domain 填域名，然后在域名服务商加一条 CNAME 指向 `xiaohuihui1022.github.io`。这个站所有路径都是相对的，换域名不用改代码。
 

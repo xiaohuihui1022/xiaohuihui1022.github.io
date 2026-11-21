@@ -217,8 +217,9 @@ function renderSetup() {
             <input class="input" id="s-token" type="password" placeholder="GitHub 访问令牌（只保存在本机）" autocomplete="off" />
           </div>
           <span class="hint">
-            需要一个 <b>Fine-grained token</b>，对该仓库开放 <code>Contents: Read and write</code> 权限。
-            <a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener noreferrer" style="color:var(--accent-text)">去创建 →</a>
+            Fine-grained token：<b>Repository access</b> 选 Only select repositories 并勾选本仓库，
+            <b>Permissions → Contents</b> 选 <b>Read and write</b>（默认是 Read-only）。
+            <a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener noreferrer" style="color:var(--accent-text);white-space:nowrap">去创建 →</a>
           </span>
         </div>
 
@@ -282,7 +283,7 @@ function renderSetup() {
     try {
       const gh = new GitHub({ token, owner, repo: name, branch });
       const info = await gh.check();
-      if (!info.canPush) throw new Error("这个令牌没有该仓库的写入权限");
+      if (!info.canPush) throw new Error("这个令牌只能读、不能写。Fine-grained token 请在 Permissions → Contents 里选 Read and write 后重新生成（默认是 Read-only）");
 
       btn.innerHTML = `${icon("lock")} 正在计算密码哈希…`;
       const auth = await makeAuth(password);
@@ -410,7 +411,7 @@ function renderTokenGate() {
         <div class="field" style="margin:0">
           <input class="input" type="password" id="t-token" placeholder="GitHub 访问令牌" autocomplete="off" autofocus />
           <span class="hint">
-            需要 <code>Contents: Read and write</code> 权限的 Fine-grained token。
+            <b>Repository access</b> 要勾选本仓库，<b>Permissions → Contents</b> 要选 <b>Read and write</b>（默认 Read-only）。
             <a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener noreferrer" style="color:var(--accent-text);white-space:nowrap">去创建 →</a>
           </span>
         </div>
@@ -438,7 +439,7 @@ function renderTokenGate() {
       const cfg2 = repoConfig();
       const gh = new GitHub({ token, owner: cfg2.owner, repo: cfg2.name, branch: cfg2.branch });
       const info = await gh.check();
-      if (!info.canPush) throw new Error("这个令牌没有该仓库的写入权限");
+      if (!info.canPush) throw new Error("这个令牌只能读、不能写。Fine-grained token 请在 Permissions → Contents 里选 Read and write 后重新生成（默认是 Read-only）");
       store.set(TOKEN_KEY, token);
       toast("验证通过");
       await startApp();
@@ -1833,7 +1834,7 @@ async function testRepo() {
   try {
     const gh = new GitHub({ token, owner, repo: name, branch });
     const info = await gh.check();
-    if (!info.canPush) throw new Error("令牌没有写入权限");
+    if (!info.canPush) throw new Error("令牌只能读、不能写：请把 Contents 权限改成 Read and write 后重新生成");
     toast(`连接正常：${info.fullName}`);
   } catch (e) {
     toast(e.message || "连接失败", "err");
@@ -1853,7 +1854,7 @@ async function saveRepo() {
   try {
     const gh = new GitHub({ token, owner, repo: name, branch });
     const info = await gh.check();
-    if (!info.canPush) throw new Error("令牌没有写入权限");
+    if (!info.canPush) throw new Error("令牌只能读、不能写：请把 Contents 权限改成 Read and write 后重新生成");
     S.site.admin = S.site.admin || {};
     S.site.admin.repo = { owner, name, branch };
     store.set(TOKEN_KEY, token);

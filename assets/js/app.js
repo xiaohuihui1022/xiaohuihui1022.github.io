@@ -568,6 +568,12 @@ function initChromeEvents() {
       return;
     }
 
+    if (e.target.closest(".nav a")) {
+      $("#nav")?.classList.remove("open");
+      $("#btn-menu")?.setAttribute("aria-expanded", "false");
+      return;
+    }
+
     if (!e.target.closest(".nav")) {
       $("#nav")?.classList.remove("open");
       $("#btn-menu")?.setAttribute("aria-expanded", "false");

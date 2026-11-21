@@ -406,11 +406,21 @@ const DEFAULT_NAV = [
   { label: "关于", to: "/about" },
 ];
 
+/* 导航目标：/archive 这样的站内路径要变成 #/archive，外部链接保持原样 */
+export function navHref(to) {
+  const raw = String(to ?? "").trim();
+  if (!raw) return "#/";
+  if (/^(https?:|mailto:|tel:)/i.test(raw)) return raw;
+  if (raw.startsWith("#")) return raw;
+  if (/^[a-z][a-z0-9+.-]*:/i.test(raw)) return "#/"; // javascript: 之类一律不认
+  return `#${raw.startsWith("/") ? "" : "/"}${raw}`;
+}
+
 export function applyChrome(site, { mode = "light" } = {}) {
   const s = site.site || {};
   const title = s.title || "我的小站";
 
-  document.title = s.description ? `${title} · ${s.subtitle || ""}`.replace(/ · $/, "") : title;
+  document.title = title;
   const desc = document.querySelector('meta[name="description"]');
   if (desc) desc.setAttribute("content", s.description || `${title} 的个人博客`);
   const og = document.querySelector('meta[property="og:title"]');
@@ -429,7 +439,11 @@ export function applyChrome(site, { mode = "light" } = {}) {
     const items = Array.isArray(site.nav) && site.nav.length ? site.nav : DEFAULT_NAV;
     nav.innerHTML = items
       .filter((x) => x && x.label)
-      .map((x) => `<a href="${safeUrl(x.to, "#/")}" data-to="${escapeHtml(x.to || "")}">${escapeHtml(x.label)}</a>`)
+      .map((x) => {
+        const href = navHref(x.to);
+        const ext = /^https?:/i.test(href) ? ' target="_blank" rel="noopener noreferrer"' : "";
+        return `<a href="${escapeHtml(href)}" data-to="${escapeHtml(x.to || "/")}"${ext}>${escapeHtml(x.label)}</a>`;
+      })
       .join("");
   }
 

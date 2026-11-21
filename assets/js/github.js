@@ -74,7 +74,16 @@ export class GitHub {
       const msg = data?.message || `请求失败（${res.status}）`;
       if (res.status === 401) throw new GitHubError(401, "令牌无效或已过期，请重新填写", data);
       if (res.status === 403 && /rate limit/i.test(msg)) throw new GitHubError(403, "触发了 GitHub 的频率限制，等一会儿再试", data);
-      if (res.status === 404) throw new GitHubError(404, `找不到 ${this.slug} 或没有访问权限`, data);
+      if (res.status === 403 && /resource not accessible/i.test(msg)) {
+        throw new GitHubError(
+          403,
+          "令牌权限不够，检查两处：① Repository access 选 Only select repositories 并勾上这个博客仓库；" +
+            "② Permissions → Contents 设为 Read and write（默认是 Read-only）。" +
+            "用经典 token 的话则是勾选 repo 权限。改完要重新生成令牌。",
+          data
+        );
+      }
+      if (res.status === 404) throw new GitHubError(404, `找不到 ${this.slug}，或者这个令牌没有该仓库的访问权限`, data);
       if (res.status === 409) throw new GitHubError(409, "仓库内容已被别处修改，请刷新后重试", data);
       throw new GitHubError(res.status, msg, data);
     }

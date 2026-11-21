@@ -26,6 +26,7 @@ const repo = {
 };
 const shas = { "content/posts.json": "sha-posts-1" };
 let shaSeq = 0;
+let denyToken = false;
 const commits = [];
 
 const errors = [];
@@ -124,6 +125,7 @@ async function main() {
       route.fulfill({ status, contentType: "application/json", body: JSON.stringify(body) });
 
     if (/^\/repos\/[^/]+\/[^/]+$/.test(p) && method === "GET") {
+      if (denyToken) return json(403, { message: "Resource not accessible by personal access token" });
       return json(200, {
         full_name: "tester/my-blog",
         default_branch: "main",
@@ -172,6 +174,20 @@ async function main() {
   step("页面标题来自配置", pageTitle.includes("灰灰的小站"), pageTitle);
 
   await shot("01-home-light.png");
+
+  // 顶栏导航链接（曾经因为把 /archive 直接写进 href 而失灵）
+  for (const [label, sel] of [
+    ["归档", ".year-group"],
+    ["标签", ".tag-pill"],
+    ["关于", ".prose"],
+    ["首页", ".hero"],
+  ]) {
+    await page.click(`.nav a:has-text("${label}")`);
+    await page.waitForSelector(sel, { timeout: 5000 });
+    const hash = await page.evaluate(() => location.hash);
+    step(`导航「${label}」可以点击`, true, hash || "(空)");
+  }
+  await page.goto(BASE, { waitUntil: "networkidle" });
 
   // 深色模式
   await page.click("#btn-mode");
@@ -327,6 +343,15 @@ async function main() {
   step("密码正确后要求本机令牌", true);
   await shot("12-admin-token.png");
 
+  // 令牌权限不足时，应该给出可操作的中文提示，而不是 GitHub 的英文原文
+  denyToken = true;
+  await page.fill("#t-token", "github_pat_no_permission");
+  await page.click("#t-btn");
+  await page.waitForTimeout(900);
+  const gateErr = (await page.textContent("#t-err")) || "";
+  step("令牌权限不足时给出可操作提示", gateErr.includes("Contents"), gateErr.slice(0, 46));
+  denyToken = false;
+
   await page.fill("#t-token", "github_pat_fake_token_for_test");
   await page.click("#t-btn");
   await page.waitForSelector(".adm-nav", { timeout: 15000 });
@@ -373,6 +398,15 @@ async function main() {
   await mp.waitForTimeout(700);
   await mp.screenshot({ path: path.join(SHOTS, "13-mobile.png"), fullPage: true });
   step("移动端首页正常渲染", (await mp.locator(".card").count()) >= 1);
+
+  // 移动端导航抽屉：点完要收起
+  await mp.click("#btn-menu");
+  await mp.waitForSelector(".nav.open");
+  await mp.click('.nav a:has-text("标签")');
+  await mp.waitForTimeout(500);
+  const menuClosed = (await mp.locator(".nav.open").count()) === 0;
+  const mobileHash = await mp.evaluate(() => location.hash);
+  step("移动端导航点完自动收起", menuClosed && mobileHash === "#/tags", mobileHash);
 
   await mobile.close();
   await browser.close();
