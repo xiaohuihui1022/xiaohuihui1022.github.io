@@ -597,6 +597,24 @@ kbd.code { font-family: var(--font-mono); font-size: 11.5px; padding: 2px 6px; b
 .commit-code { color: var(--accent-text); font-weight: 600; min-width: 16px; flex: none; }
 .commit-row.more { font-family: var(--font-body); color: var(--text-3); }
 
+/* 插入音乐的选择列表 */
+.pick-list { display: flex; flex-direction: column; gap: 6px; max-height: 240px; overflow: auto; margin-top: 10px; }
+.pick {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  align-items: flex-start;
+  padding: 9px 12px;
+  border: 1px solid var(--line-soft);
+  border-radius: 10px;
+  background: var(--surface-2);
+  text-align: left;
+  transition: border-color 0.2s, background 0.2s;
+}
+.pick:hover { border-color: var(--accent-line); background: var(--surface); }
+.pick b { font-size: 13.5px; font-weight: 600; }
+.pick span { font-size: 11.5px; color: var(--text-3); }
+
 /* 音乐编辑行 */
 .song-edit {
   padding: 10px;

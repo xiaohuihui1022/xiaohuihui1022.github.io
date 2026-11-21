@@ -1425,6 +1425,11 @@ kbd {
 .music-player:empty { display: none; }
 .music-frame-list { max-width: 430px; margin: 0 auto; }
 
+/* 文章正文里的音乐卡片 */
+.music-inline { margin: 1.7em 0; }
+.music-inline .song { box-shadow: none; }
+.prose .music-inline .song-info b a { text-decoration: none; }
+
 .music-page { max-width: 900px; margin: 32px auto 0; }
 .music-note {
   display: flex;

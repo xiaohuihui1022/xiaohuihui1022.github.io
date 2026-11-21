@@ -25,7 +25,7 @@ import { makeAuth, verifyPassword, strength, suggestPassword, MIN_LENGTH } from 
 import { GitHub, GitHubError, bytesToB64 } from "./github.js";
 import { renderMarkdown } from "./markdown.js";
 import { applyTheme, PRESETS, FONTS, MODES, themeVars, presetOf } from "./theme.js";
-import { previewCardsHTML, musicSongs, musicCardHTML } from "./views.js";
+import { previewCardsHTML, musicSongs, musicCardHTML, hydrateMusic } from "./views.js";
 
 const TOKEN_KEY = "blog.gh.token";
 const REPO_FILE = "content/site.json";
@@ -849,6 +849,7 @@ function editorHTML() {
         <span class="sep"></span>
         <button data-md="link" title="链接">${icon("link")}</button>
         <button data-md="image" title="插入图片">${icon("image")}</button>
+        <button data-md="music" title="插入音乐卡片">${icon("music")}</button>
         <div class="spacer"></div>
         <button data-md="preview-toggle" title="刷新预览">${icon("eye")}</button>
       </div>
@@ -881,6 +882,7 @@ function wireEditor() {
   const refresh = () => {
     if (!previewBody) return;
     previewBody.innerHTML = renderMarkdown(ta.value);
+    hydrateMusic(previewBody, S.site);
   };
   const refreshSoon = debounce(refresh, 180);
   refresh();
@@ -1023,6 +1025,72 @@ function wireEditor() {
   });
 }
 
+/* 正文里插入音乐卡片 */
+function openMusicPicker(ta, { refresh, sync }) {
+  const ensure = ensureMusic();
+  const songs = musicSongs(S.site);
+
+  const layer = document.createElement("div");
+  layer.className = "modal-layer";
+  layer.innerHTML = `
+    <div class="modal" role="dialog" aria-modal="true" style="width:min(460px,100%)">
+      <h3>插入音乐</h3>
+      <p>选一首已经添加的歌，或者直接粘贴网易云链接。</p>
+      ${
+        songs.length
+          ? `<div class="pick-list">${songs
+              .map(
+                (s) =>
+                  `<button class="pick" data-pick="${escapeHtml(s.id)}"><b>${escapeHtml(
+                    s.name || "未命名"
+                  )}</b><span>${escapeHtml(s.artist || "")}</span></button>`
+              )
+              .join("")}</div>`
+          : `<p class="hint">还没有添加歌曲，可以先在「音乐」里加，或者直接粘贴链接。</p>`
+      }
+      <div class="input-group" style="margin-top:12px">
+        <input class="input" id="pick-input" placeholder="粘贴歌曲链接或 ID" />
+      </div>
+      <div class="modal-acts">
+        <button class="btn btn-ghost" data-x="cancel">取消</button>
+        <button class="btn btn-primary" data-x="ok">插入</button>
+      </div>
+    </div>`;
+
+  const close = () => {
+    layer.classList.add("out");
+    setTimeout(() => layer.remove(), 180);
+    document.removeEventListener("keydown", onKey);
+  };
+  const onKey = (e) => {
+    if (e.key === "Escape") close();
+  };
+
+  const insert = (id) => {
+    if (!id) return toast("没认出歌曲 ID，粘贴完整链接试试", "err");
+    insertAtCursor(ta, `\n{{music:${id}}}\n`);
+    sync();
+    refresh();
+    close();
+    toast("已插入，保存后正文里就会出现这张卡片");
+  };
+
+  layer.addEventListener("click", (e) => {
+    e.stopPropagation();
+    if (e.target === layer) return close();
+    const pick = e.target.closest("[data-pick]");
+    if (pick) return insert(pick.dataset.pick);
+    const act = e.target.closest("[data-x]")?.dataset.x;
+    if (act === "cancel") return close();
+    if (act === "ok") return insert(parseSongId($("#pick-input")?.value || ""));
+  });
+
+  document.addEventListener("keydown", onKey);
+  document.body.appendChild(layer);
+  requestAnimationFrame(() => layer.classList.add("in"));
+  layer.querySelector("#pick-input")?.focus();
+}
+
 function insertAtCursor(ta, text) {
   const s = ta.selectionStart;
   const e = ta.selectionEnd;
@@ -1084,6 +1152,8 @@ function mdAction(action, ta, { refresh, sync }) {
       return wrap("[", "](https://example.com)", "链接文字");
     case "image":
       return $("#inline-file")?.click();
+    case "music":
+      return openMusicPicker(ta, { refresh, sync });
     case "preview-toggle":
       refresh();
       return toast("预览已刷新");

@@ -14,6 +14,7 @@ import {
   tagHTML,
   aboutHTML,
   musicPageHTML,
+  hydrateMusic,
   missingHTML,
   published,
   orderedPosts,
@@ -154,6 +155,7 @@ function render({ scroll = true } = {}) {
 }
 
 function afterRender() {
+  hydrateMusic(APP, state.site);
   wireCodeCopy();
   buildToc();
   updateReadProgress();
@@ -230,9 +232,15 @@ function buildToc() {
       links.forEach((a, id) => a.classList.toggle("is-on", id === current));
       const active = links.get(current);
       if (active) {
+        // 只滚动目录本身。用 scrollIntoView 会连带把整个页面滚走
+        // （目录是 fixed 定位，但布局位置在文档流里），滚到底部时表现为「被拽回顶部」
         const box = toc.getBoundingClientRect();
         const ab = active.getBoundingClientRect();
-        if (ab.top < box.top + 20 || ab.bottom > box.bottom - 20) active.scrollIntoView({ block: "nearest" });
+        if (ab.top < box.top + 20) {
+          toc.scrollTop -= box.top + 20 - ab.top;
+        } else if (ab.bottom > box.bottom - 20) {
+          toc.scrollTop += ab.bottom - (box.bottom - 20);
+        }
       }
     },
     { rootMargin: "-96px 0px -65% 0px", threshold: 0 }

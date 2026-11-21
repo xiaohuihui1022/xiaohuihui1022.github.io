@@ -239,6 +239,14 @@ export function renderMarkdown(source) {
       continue;
     }
 
+    // 音乐卡片：{{music:1234567}}
+    const tune = /^\s*\{\{\s*music\s*:\s*(\d{3,})\s*\}\}\s*$/.exec(line);
+    if (tune) {
+      out.push(`<div class="music-inline" data-music="${tune[1]}"></div>`);
+      i++;
+      continue;
+    }
+
     // 分隔线
     if (/^\s{0,3}([-*_])(\s*\1){2,}\s*$/.test(line)) {
       out.push("<hr />");

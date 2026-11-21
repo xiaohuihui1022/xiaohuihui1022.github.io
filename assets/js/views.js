@@ -434,8 +434,22 @@ export function musicCardHTML(song, i = 0) {
   </article>`;
 }
 
-export function musicSectionHTML(site) {
-  if (!musicEnabled(site)) return "";
+/* 把文章里的 {{music:ID}} 占位符补成真正的卡片 */
+export function hydrateMusic(root, site) {
+  if (!root) return;
+  const songs = musicSongs(site);
+  root.querySelectorAll(".music-inline[data-music]").forEach((el) => {
+    if (el.dataset.ready) return;
+    const id = el.dataset.music;
+    const song =
+      songs.find((s) => String(s.id) === String(id)) ||
+      { id, name: "网易云音乐", artist: `歌曲 ${id}`, cover: "" };
+    el.innerHTML = musicCardHTML(song);
+    el.dataset.ready = "1";
+  });
+}
+
+export function musicSectionHTML(site) {  if (!musicEnabled(site)) return "";
   const songs = musicSongs(site).slice(0, 3);
   return `
   <section class="section">

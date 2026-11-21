@@ -281,6 +281,14 @@ async function main() {
   step("打开文章详情", Boolean(postTitle), postTitle || "");
   const toc = await page.locator(".toc a").count();
   step("长文生成目录", toc >= 2, `${toc} 条`);
+
+  // 滚到底部不能因为目录高亮把整页拽回去
+  await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
+  await page.waitForTimeout(900);
+  const y1 = await page.evaluate(() => Math.round(window.scrollY));
+  await page.waitForTimeout(900);
+  const y2 = await page.evaluate(() => Math.round(window.scrollY));
+  step("滚到底部不会被自动拽回上面", Math.abs(y2 - y1) < 40, `${y1} → ${y2}`);
   await shot("03-post.png");
 
   // 归档 / 标签 / 关于
@@ -366,12 +374,13 @@ async function main() {
   await md.scrollIntoViewIfNeeded();
   await md.click();
   await md.fill(
-    "## 小标题\n\n这是**加粗**、*斜体*和 `行内代码`。\n\n- 第一项\n- 第二项\n\n> 引用一句话\n\n| 列 | 值 |\n| --- | --- |\n| a | 1 |\n"
+    "## 小标题\n\n这是**加粗**、*斜体*和 `行内代码`。\n\n- 第一项\n- 第二项\n\n> 引用一句话\n\n{{music:1234567}}\n\n| 列 | 值 |\n| --- | --- |\n| a | 1 |\n"
   );
   await page.waitForTimeout(400);
   const previewText = await page.textContent("#md-preview-body");
   step("编辑器实时预览 Markdown", previewText.includes("小标题") && previewText.includes("行内代码"));
   step("预览支持表格", (await page.locator("#md-preview-body table").count()) === 1);
+  step("正文里的 {{music:ID}} 会渲染成卡片", (await page.locator("#md-preview-body .music-inline .song").count()) === 1);
   await shot("10-admin-editor.png");
 
   // 选「发布」再保存；故意让第一次 PUT 返回 409，验证会自动重新取 sha 再提交
@@ -436,6 +445,16 @@ async function main() {
   await page.waitForSelector(".music-list");
   step("音乐页可以打开", (await page.locator(".music-list .song").count()) >= 1);
   await shot("11c-music-page.png");
+
+  // 文章正文里的音乐卡片
+  if (created?.slug) {
+    await page.evaluate((slug) => {
+      location.hash = `#/post/${slug}`;
+    }, created.slug);
+    await page.waitForSelector(".post-title");
+    step("文章正文里的音乐卡片会显示", (await page.locator(".prose .music-inline .song").count()) === 1);
+  }
+
   await page.goto(BASE, { waitUntil: "networkidle" });
 
   /* ---------------------------------------------------------- 二次访问需要密码 */
