@@ -17,7 +17,7 @@ export function safeUrl(url, fallback = "") {
   const raw = String(url ?? "").trim();
   if (!raw) return fallback;
   if (/^(https?:|mailto:|tel:|#|\/|\.\/|\.\.\/)/i.test(raw)) return escapeHtml(raw);
-  if (/^[\w./-]+\.(svg|png|jpe?g|gif|webp|avif)$/i.test(raw)) return escapeHtml(raw);
+  if (/^[\w./-]+\.(svg|png|jpe?g|gif|webp|avif|html?)$/i.test(raw)) return escapeHtml(raw);
   if (/^assets\//i.test(raw)) return escapeHtml(raw);
   return fallback;
 }
@@ -69,6 +69,7 @@ const ICONS = {
   quote: '<path d="M9.5 6.5C7 7.6 5.8 9.6 5.8 12.4c0 2 1.2 3.3 2.9 3.3 1.6 0 2.8-1.1 2.8-2.7 0-1.5-1-2.6-2.5-2.6h-.4c.2-1 1-1.9 2.2-2.5Zm8.4 0c-2.5 1.1-3.7 3.1-3.7 5.9 0 2 1.2 3.3 2.9 3.3 1.6 0 2.8-1.1 2.8-2.7 0-1.5-1-2.6-2.5-2.6h-.4c.2-1 1-1.9 2.2-2.5Z"/>',
   code: '<path d="m9 8-4.5 4L9 16M15 8l4.5 4L15 16"/>',
   music: '<path d="M9 18V6.5l10-2V16"/><circle cx="6.5" cy="18" r="2.6"/><circle cx="16.5" cy="16" r="2.6"/>',
+  gamepad: '<rect x="2.5" y="7" width="19" height="10" rx="5"/><path d="M7.5 10v4M5.5 12h4"/><circle cx="15.8" cy="11" r=".95" fill="currentColor" stroke="none"/><circle cx="18" cy="13.2" r=".95" fill="currentColor" stroke="none"/>',
   play: '<path d="M8 5.2 19 12 8 18.8Z" fill="currentColor" stroke-linejoin="round"/>',
   pause: '<path d="M9 5v14M15 5v14" stroke-width="2.4"/>',
   arrowup: '<path d="M12 19V5m-6 6 6-6 6 6"/>',

@@ -495,6 +495,68 @@ export function musicPageHTML({ site }) {
   </div>`;
 }
 
+/* ------------------------------------------------------------ 小游戏 */
+
+/* 想再加一个游戏：把 html 文件放到根目录，然后在这里加一条 */
+export const GAMES = [
+  {
+    slug: "phrolova",
+    title: "鸣潮角色猜谜游戏",
+    desc: "根据提示猜出《鸣潮》的角色，输入名字就行，猜错会越缩越小。",
+    file: "phrolova.html",
+    tag: "小游戏",
+  },
+];
+
+export function gameBySlug(slug) {
+  return GAMES.find((g) => g.slug === slug) || null;
+}
+
+export function gamesPageHTML() {
+  return `
+  <div class="view">
+    <header class="page-head" style="margin:0 auto">
+      <span class="eyebrow">Games</span>
+      <h1 class="page-title">${icon("gamepad", "title-i")}小游戏</h1>
+      <p class="page-desc">写代码写累了，来这里玩两分钟。</p>
+    </header>
+    <div class="game-grid">
+      ${GAMES.map(
+        (g) => `
+        <a class="game-card" href="#/game/${encodeURIComponent(g.slug)}">
+          <div class="game-thumb"><span>${icon("play")}</span></div>
+          <div class="game-body">
+            <div class="game-tag">${escapeHtml(g.tag || "小游戏")}</div>
+            <h2 class="game-title">${escapeHtml(g.title)}</h2>
+            <p class="game-desc">${escapeHtml(g.desc || "")}</p>
+          </div>
+          <div class="game-foot">
+            <span class="game-go">开始玩 ${icon("arrow-right")}</span>
+          </div>
+        </a>`
+      ).join("")}
+    </div>
+  </div>`;
+}
+
+export function gamePageHTML(slug) {
+  const game = gameBySlug(slug);
+  if (!game) return missingHTML({ what: "游戏" });
+  return `
+  <div class="game-view">
+    <div class="game-bar">
+      <a class="btn btn-line btn-sm" href="#/games">${icon("arrow-left")} 全部游戏</a>
+      <b>${escapeHtml(game.title)}</b>
+      <a class="btn btn-line btn-sm" href="${safeUrl(game.file, "#/games")}" target="_blank" rel="noopener noreferrer">
+        ${icon("external")} 新标签打开
+      </a>
+    </div>
+    <iframe class="game-frame" src="${safeUrl(game.file, "about:blank")}" title="${escapeHtml(
+    game.title
+  )}" allow="fullscreen" allowfullscreen loading="eager"></iframe>
+  </div>`;
+}
+
 /* ------------------------------------------------------------ 站点框架 */
 
 const DEFAULT_NAV = [
@@ -535,9 +597,12 @@ export function applyChrome(site, { mode = "light" } = {}) {
   const nav = document.getElementById("nav");
   if (nav) {
     const items = (Array.isArray(site.nav) && site.nav.length ? site.nav : DEFAULT_NAV).slice();
-    // 有音乐就自动补一个入口，不用手动去加导航
+    // 有游戏就自动补一个入口，不用手动去加导航
     if (musicEnabled(site) && !items.some((x) => String(x?.to || "") === "/music")) {
       items.push({ label: "音乐", to: "/music" });
+    }
+    if (GAMES.length && !items.some((x) => String(x?.to || "") === "/games")) {
+      items.push({ label: "游戏", to: "/games" });
     }
     nav.innerHTML = items
       .filter((x) => x && x.label)

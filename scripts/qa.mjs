@@ -455,6 +455,20 @@ async function main() {
     step("文章正文里的音乐卡片会显示", (await page.locator(".prose .music-inline .song").count()) === 1);
   }
 
+  /* ---------------------------------------------------------- 小游戏 */
+  await page.evaluate(() => {
+    location.hash = "#/games";
+  });
+  await page.waitForSelector(".game-card");
+  step("导航里有「游戏」入口", (await page.locator('.nav a:has-text("游戏")').count()) === 1);
+  step("游戏列表出现", (await page.locator(".game-card").count()) >= 1);
+  await page.click(".game-card");
+  await page.waitForSelector(".game-frame");
+  const gameFrame = page.frameLocator(".game-frame");
+  await gameFrame.locator("#guessInput").waitFor({ timeout: 15000 });
+  step("游戏在路由里能正常加载", true);
+  await shot("11d-game.png", false);
+
   await page.goto(BASE, { waitUntil: "networkidle" });
 
   /* ---------------------------------------------------------- 二次访问需要密码 */

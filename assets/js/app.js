@@ -15,6 +15,9 @@ import {
   aboutHTML,
   musicPageHTML,
   hydrateMusic,
+  gamesPageHTML,
+  gamePageHTML,
+  gameBySlug,
   missingHTML,
   published,
   orderedPosts,
@@ -92,6 +95,8 @@ function parseRoute() {
   if (a === "tags") return { name: "tags", path: "/tags" };
   if (a === "about") return { name: "about", path: "/about" };
   if (a === "music") return { name: "music", path: "/music" };
+  if (a === "games") return { name: "games", path: "/games" };
+  if (a === "game" && b) return { name: "game", path: "/games", slug: b };
   if (a === "admin") return { name: "admin", path: "/admin" };
   return { name: "missing", path: `/${a}` };
 }
@@ -124,6 +129,10 @@ function viewHTML() {
       return aboutHTML({ site });
     case "music":
       return musicPageHTML({ site });
+    case "games":
+      return gamesPageHTML();
+    case "game":
+      return gamePageHTML(route.slug);
     default:
       return missingHTML({ what: "页面" });
   }
@@ -136,6 +145,8 @@ function render({ scroll = true } = {}) {
 
   setActiveNav(route);
   document.body.classList.remove("is-locked");
+  // 游戏页用沉浸式布局：藏掉页脚，让 iframe 尽量占满
+  document.body.classList.toggle("is-immersive", route.name === "game");
 
   const s = site.site || {};
   const baseTitle = s.title || "我的小站";
@@ -146,8 +157,25 @@ function render({ scroll = true } = {}) {
     if (desc && post) desc.setAttribute("content", post.excerpt || String(post.body || "").slice(0, 120));
   } else if (route.name === "home") {
     document.title = baseTitle;
+  } else if (route.name === "game") {
+    const g = gameBySlug(route.slug);
+    document.title = `${g ? g.title : "游戏"} · ${baseTitle}`;
   } else {
-    document.title = `${baseTitle} · ${route.name === "archive" ? "归档" : route.name === "tags" ? "标签" : route.name === "about" ? "关于" : route.name === "music" ? "音乐" : route.name === "tag" ? route.tag : "页面"}`;
+    document.title = `${baseTitle} · ${
+      route.name === "archive"
+        ? "归档"
+        : route.name === "tags"
+        ? "标签"
+        : route.name === "about"
+        ? "关于"
+        : route.name === "music"
+        ? "音乐"
+        : route.name === "games"
+        ? "游戏"
+        : route.name === "tag"
+        ? route.tag
+        : "页面"
+    }`;
   }
 
   afterRender();

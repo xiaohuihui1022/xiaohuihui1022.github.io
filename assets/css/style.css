@@ -1447,6 +1447,104 @@ kbd {
   .music-page { margin-top: 22px; }
 }
 
+/* --------------------------------------------------------------------------
+   16. 小游戏
+   -------------------------------------------------------------------------- */
+.game-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 18px;
+  margin-top: 34px;
+}
+.game-card {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 18px;
+  background: var(--surface);
+  border: 1px solid var(--line-soft);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-1);
+  transition: transform 0.3s cubic-bezier(0.22, 0.68, 0.36, 1), border-color 0.3s, box-shadow 0.3s;
+}
+.game-card:hover {
+  transform: translateY(-5px);
+  border-color: var(--accent-line);
+  box-shadow: var(--shadow-2);
+}
+.game-thumb {
+  height: 132px;
+  border-radius: calc(var(--radius) - 6px);
+  display: grid;
+  place-items: center;
+  background:
+    radial-gradient(120% 120% at 18% 8%, color-mix(in srgb, var(--accent) 26%, transparent), transparent 60%),
+    radial-gradient(120% 120% at 85% 95%, color-mix(in srgb, var(--accent-2) 28%, transparent), transparent 62%),
+    linear-gradient(140deg, var(--surface-2), var(--bg-soft));
+}
+.game-thumb span {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: var(--accent);
+  color: var(--accent-ink);
+  box-shadow: 0 12px 26px -12px color-mix(in srgb, var(--accent) 90%, transparent);
+}
+.game-thumb .i { width: 20px; height: 20px; }
+.game-body { display: flex; flex-direction: column; gap: 6px; }
+.game-tag { font-size: 11px; letter-spacing: 0.1em; color: var(--accent-text); text-transform: uppercase; }
+.game-title { font-family: var(--font-display); font-size: 17px; font-weight: 600; }
+.game-desc { font-size: 13px; color: var(--text-2); line-height: 1.8; }
+.game-foot { margin-top: auto; padding-top: 4px; }
+.game-go {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--accent-text);
+  transition: gap 0.2s;
+}
+.game-card:hover .game-go { gap: 10px; }
+
+/* 游戏页：占满可视区 */
+body.is-immersive .site-foot { display: none; }
+body.is-immersive .app { padding-bottom: 14px; }
+.game-view {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding-top: 14px;
+  height: calc(100vh - var(--head-h) - 40px);
+  min-height: 460px;
+}
+.game-bar { display: flex; align-items: center; gap: 12px; }
+.game-bar b {
+  flex: 1;
+  text-align: center;
+  font-family: var(--font-display);
+  font-size: 15px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.game-frame {
+  flex: 1;
+  width: 100%;
+  border: 1px solid var(--line-soft);
+  border-radius: var(--radius);
+  background: #101527;
+  box-shadow: var(--shadow-1);
+}
+@media (max-width: 760px) {
+  .game-view { height: calc(100vh - var(--head-h) - 28px); min-height: 420px; }
+  .game-bar b { display: none; }
+  .game-grid { grid-template-columns: 1fr; }
+}
+
 /* 进入控制台时收起公共框架 */
 body.admin-on .site-head,
 body.admin-on .site-foot,
