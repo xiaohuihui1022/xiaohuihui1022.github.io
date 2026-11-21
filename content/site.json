@@ -53,6 +53,12 @@
       "name": "xiaohuihui1022.github.io",
       "branch": "main"
     },
-    "auth": null
+    "auth": {
+      "algo": "PBKDF2-SHA256",
+      "iterations": 600000,
+      "salt": "Ktg3amURaAY2wmJxIrokJg==",
+      "hash": "LnuSMB0zFHVCMBg7m+CZWjwOXnrZpAL/GYPZidYrAmg=",
+      "createdAt": "2026-11-21T11:17:15.183Z"
+    }
   }
 }
