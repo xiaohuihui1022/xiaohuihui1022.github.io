@@ -207,7 +207,7 @@ export function homeHTML({ site, posts, page = 1 }) {
        </section>`
     : "";
 
-  return `<div class="view">${hero}${featured}${empty}${list}</div>`;
+  return `<div class="view">${hero}${featured}${empty}${list}${musicSectionHTML(site)}</div>`;
 }
 
 /* ------------------------------------------------------------ 文章页 */
@@ -397,6 +397,90 @@ export function missingHTML({ what = "页面" } = {}) {
   </div>`;
 }
 
+/* ------------------------------------------------------------ 音乐 */
+
+export function musicSongs(site) {
+  const m = site?.music || {};
+  return (Array.isArray(m.songs) ? m.songs : []).filter((s) => s && (s.id || s.name));
+}
+
+export function musicEnabled(site) {
+  return Boolean(site?.music?.enabled) && musicSongs(site).length > 0;
+}
+
+export function musicCardHTML(song, i = 0) {
+  const cover = song.cover
+    ? `<img src="${safeUrl(song.cover, "")}" alt="" loading="lazy" />`
+    : `<span class="song-note">♪</span>`;
+  const name = escapeHtml(song.name || "未命名");
+  const title = song.id
+    ? `<a href="https://music.163.com/song?id=${encodeURIComponent(song.id)}" target="_blank" rel="noopener noreferrer">${name}</a>`
+    : name;
+  return `
+  <article class="song" data-i="${i}">
+    <div class="song-main">
+      <div class="song-art">${cover}</div>
+      <div class="song-info">
+        <b>${title}</b>
+        <span>${escapeHtml(song.artist || "")}</span>
+      </div>
+      ${
+        song.id
+          ? `<button class="song-play" data-play="${escapeHtml(song.id)}" aria-label="播放 ${name}">${icon("play")}</button>`
+          : ""
+      }
+    </div>
+    ${song.id ? `<div class="song-player"></div>` : ""}
+  </article>`;
+}
+
+export function musicSectionHTML(site) {
+  if (!musicEnabled(site)) return "";
+  const songs = musicSongs(site).slice(0, 3);
+  return `
+  <section class="section">
+    <div class="section-head">
+      <h2 class="section-title">${escapeHtml(site.music.title || "最近在听")}</h2>
+      <a class="section-more" href="#/music">全部 ${icon("arrow-right")}</a>
+    </div>
+    <div class="music-grid">${songs.map(musicCardHTML).join("")}</div>
+  </section>`;
+}
+
+export function musicPageHTML({ site }) {
+  const m = site.music || {};
+  const songs = musicSongs(site);
+  const playlist = String(m.playlistId || "").trim();
+  const title = m.title || "最近在听";
+
+  const playlistEmbed =
+    playlist && m.embed !== false
+      ? `<iframe class="music-frame music-frame-list" title="网易云音乐歌单" src="https://music.163.com/outchain/player?type=0&id=${encodeURIComponent(
+          playlist
+        )}&auto=0&height=430" height="430" frameborder="no" loading="lazy" allow="autoplay"></iframe>`
+      : "";
+
+  const body = songs.length
+    ? `<div class="music-list">${songs.map(musicCardHTML).join("")}</div>`
+    : `<div class="empty"><b>还没有添加音乐</b><span>去控制台的「音乐」里加一首吧。</span></div>`;
+
+  return `
+  <div class="view">
+    <header class="page-head" style="margin:0 auto">
+      <span class="eyebrow">Music</span>
+      <h1 class="page-title">${icon("music", "title-i")}${escapeHtml(title)}</h1>
+      <p class="page-desc">${escapeHtml(m.desc || "一些最近在循环的歌。点播放可以直接在网页里听。")}</p>
+    </header>
+    <div class="music-page">
+      <div class="music-player" id="music-player">${playlistEmbed}</div>
+      ${body}
+      <p class="music-note">
+        ${icon("info")}播放器由网易云音乐提供。部分歌曲需要登录或会员才能在网页里播放，点歌名可以去网易云收听。
+      </p>
+    </div>
+  </div>`;
+}
+
 /* ------------------------------------------------------------ 站点框架 */
 
 const DEFAULT_NAV = [
@@ -436,7 +520,11 @@ export function applyChrome(site, { mode = "light" } = {}) {
 
   const nav = document.getElementById("nav");
   if (nav) {
-    const items = Array.isArray(site.nav) && site.nav.length ? site.nav : DEFAULT_NAV;
+    const items = (Array.isArray(site.nav) && site.nav.length ? site.nav : DEFAULT_NAV).slice();
+    // 有音乐就自动补一个入口，不用手动去加导航
+    if (musicEnabled(site) && !items.some((x) => String(x?.to || "") === "/music")) {
+      items.push({ label: "音乐", to: "/music" });
+    }
     nav.innerHTML = items
       .filter((x) => x && x.label)
       .map((x) => {

@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="zh-CN" data-mode="light">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="robots" content="noindex, nofollow" />
+<title>本地控制台</title>
+<link rel="icon" href="assets/img/favicon.svg" type="image/svg+xml" />
+<link rel="preload" href="assets/fonts/quicksand-latin.woff2" as="font" type="font/woff2" crossorigin />
+<link rel="stylesheet" href="assets/css/style.css" />
+<link rel="stylesheet" href="assets/css/admin.css" />
+<script>
+  /* 这个令牌由 scripts/console.mjs 在返回页面时注入；直接打开这个文件是拿不到的 */
+  window.__CONSOLE_TOKEN__ = "%%CONSOLE_TOKEN%%";
+</script>
+<script type="module" src="assets/js/console.js"></script>
+</head>
+<body class="admin-on">
+  <div class="decor" aria-hidden="true">
+    <span class="blob blob-a"></span>
+    <span class="blob blob-b"></span>
+    <span class="blob blob-c"></span>
+    <span class="grain"></span>
+  </div>
+
+  <main class="app" id="app">
+    <div class="boot">
+      <span class="boot-dot"></span>
+      <p>正在打开本地控制台…</p>
+    </div>
+  </main>
+
+  <div class="toast-root" id="toast-root" aria-live="polite"></div>
+</body>
+</html>

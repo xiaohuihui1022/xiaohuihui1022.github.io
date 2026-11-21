@@ -25,7 +25,7 @@ import { makeAuth, verifyPassword, strength, suggestPassword, MIN_LENGTH } from 
 import { GitHub, GitHubError, bytesToB64 } from "./github.js";
 import { renderMarkdown } from "./markdown.js";
 import { applyTheme, PRESETS, FONTS, MODES, themeVars, presetOf } from "./theme.js";
-import { previewCardsHTML } from "./views.js";
+import { previewCardsHTML, musicSongs, musicCardHTML } from "./views.js";
 
 const TOKEN_KEY = "blog.gh.token";
 const REPO_FILE = "content/site.json";
@@ -34,6 +34,8 @@ const POSTS_FILE = "content/posts.json";
 const S = {
   root: null,
   ctx: null,
+  mode: "github",
+  backend: null,
   site: null,
   posts: null,
   baseSite: "",
@@ -93,7 +95,7 @@ function updateDirtyBadge() {
 }
 
 function loadCSS() {
-  if (document.querySelector("link[data-admin-css]")) return;
+  if (document.querySelector('link[data-admin-css], link[href*="admin.css"]')) return;
   const link = document.createElement("link");
   link.rel = "stylesheet";
   link.href = "assets/css/admin.css";
@@ -124,6 +126,8 @@ function applyDraftTheme() {
 export async function mount(root, ctx) {
   S.root = root;
   S.ctx = ctx;
+  S.mode = ctx.mode === "local" ? "local" : "github";
+  S.backend = ctx.backend || null;
   S.ac = new AbortController();
   loadCSS();
 
@@ -139,8 +143,8 @@ export async function mount(root, ctx) {
   const token = store.get(TOKEN_KEY, "");
 
   // 有令牌但部署的配置里还没有密码：可能是刚初始化、Pages 还没重新部署完，
-  // 这种情况直接问仓库，避免让用户重复走一遍初始化。
-  if (!auth && token) {
+  // 这种情况直接问仓库，避免让用户重复走一遍初始化。（本地模式不需要）
+  if (S.mode !== "local" && !auth && token) {
     const cfg0 = repoConfig();
     if (cfg0.owner && cfg0.name) {
       S.root.innerHTML = `<div class="lock-wrap"><div class="boot"><span class="boot-dot"></span><p>正在确认仓库状态…</p></div></div>`;
@@ -179,14 +183,15 @@ export function unmount() {
 
 function renderSetup() {
   const cfg = repoConfig();
+  const isLocal = S.mode === "local";
   S.root.innerHTML = `
   <div class="lock-wrap">
-    <div class="lock-card wide">
+    <div class="lock-card ${isLocal ? "" : "wide"}">
       <img class="lock-avatar" src="${escapeHtml(S.site?.site?.avatar || "assets/img/avatar.svg")}" alt="" />
       <h1>第一次见面，先设个密码</h1>
       <p class="lead">
-        这个密码用来打开控制台。它不会被保存，只有一段<b>经过 60 万次 PBKDF2 计算的哈希</b>会写进仓库——
-        即使仓库是公开的，别人也无法从哈希反推出密码。
+        这个密码用来打开控制台。它不会被保存，只有一段<b>经过 60 万次 PBKDF2 计算的哈希</b>会写进
+        <code>content/site.json</code>——即使仓库是公开的，别人也无法从哈希反推出密码。
       </p>
       <div class="steps"><i class="on"></i><i></i><i></i></div>
 
@@ -206,31 +211,41 @@ function renderSetup() {
           <input class="input" type="password" id="s-pw2" placeholder="确认密码" autocomplete="new-password" />
         </div>
 
-        <div class="field">
-          <label>${icon("github")} GitHub 仓库</label>
-          <div class="grid2">
-            <input class="input" id="s-owner" placeholder="用户名，如 your-name" value="${escapeHtml(cfg.owner)}" />
-            <input class="input" id="s-repo" placeholder="仓库名，如 my-blog" value="${escapeHtml(cfg.name)}" />
-          </div>
-          <div class="input-group" style="margin-top:8px">
-            <input class="input" id="s-branch" placeholder="分支" value="${escapeHtml(cfg.branch)}" />
-            <input class="input" id="s-token" type="password" placeholder="GitHub 访问令牌（只保存在本机）" autocomplete="off" />
-          </div>
-          <span class="hint">
-            Fine-grained token：<b>Repository access</b> 选 Only select repositories 并勾选本仓库，
-            <b>Permissions → Contents</b> 选 <b>Read and write</b>（默认是 Read-only）。
-            <a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener noreferrer" style="color:var(--accent-text);white-space:nowrap">去创建 →</a>
-          </span>
-        </div>
+        ${
+          isLocal
+            ? `<p class="hint" style="text-align:center">
+                 本地模式会把哈希直接写入 <code>content/site.json</code>，不访问 GitHub。
+               </p>`
+            : `<div class="field">
+                 <label>${icon("github")} GitHub 仓库</label>
+                 <div class="grid2">
+                   <input class="input" id="s-owner" placeholder="用户名，如 your-name" value="${escapeHtml(cfg.owner)}" />
+                   <input class="input" id="s-repo" placeholder="仓库名，如 my-blog" value="${escapeHtml(cfg.name)}" />
+                 </div>
+                 <div class="input-group" style="margin-top:8px">
+                   <input class="input" id="s-branch" placeholder="分支" value="${escapeHtml(cfg.branch)}" />
+                   <input class="input" id="s-token" type="password" placeholder="GitHub 访问令牌（只保存在本机）" autocomplete="off" />
+                 </div>
+                 <span class="hint">
+                   Fine-grained token：<b>Repository access</b> 选 Only select repositories 并勾选本仓库，
+                   <b>Permissions → Contents</b> 选 <b>Read and write</b>（默认是 Read-only）。
+                   <a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener noreferrer" style="color:var(--accent-text);white-space:nowrap">去创建 →</a>
+                 </span>
+               </div>`
+        }
 
         <div class="lock-error" id="s-error"></div>
 
         <button class="btn btn-primary" type="submit" id="s-submit" style="height:46px;margin-top:4px">
           ${icon("shield")} 完成初始化
         </button>
-        <p class="hint" style="text-align:center">
-          令牌只用于把文章提交到你的仓库，永远不会写进仓库或发送到别处。
-        </p>
+        ${
+          isLocal
+            ? ""
+            : `<p class="hint" style="text-align:center">
+                 令牌只用于把文章提交到你的仓库，永远不会写进仓库或发送到别处。
+               </p>`
+        }
       </form>
     </div>
   </div>`;
@@ -266,13 +281,37 @@ function renderSetup() {
 
     const password = pw.value;
     const password2 = $("#s-pw2").value;
+
+    if (password.length < MIN_LENGTH) return fail(`密码至少 ${MIN_LENGTH} 位`);
+    if (password !== password2) return fail("两次输入的密码不一样");
+
+    // 本地模式：只写本地文件，不需要令牌
+    if (isLocal) {
+      const btnL = $("#s-submit");
+      btnL.classList.add("is-busy");
+      btnL.innerHTML = `${icon("refresh")} 正在计算哈希…`;
+      try {
+        const auth = await makeAuth(password);
+        S.site.admin = S.site.admin || {};
+        S.site.admin.auth = auth;
+        S.site.updatedAt = new Date().toISOString();
+        await S.backend.writeFile(REPO_FILE, JSON.stringify(S.site, null, 2) + "\n");
+        S.baseSite = JSON.stringify(S.site);
+        toast("密码已写入本地文件");
+        await startLocal();
+      } catch (e2) {
+        fail(e2?.message || "写入失败");
+        btnL.classList.remove("is-busy");
+        btnL.innerHTML = `${icon("shield")} 完成初始化`;
+      }
+      return;
+    }
+
     const owner = $("#s-owner").value.trim();
     const name = $("#s-repo").value.trim();
     const branch = $("#s-branch").value.trim() || "main";
     const token = $("#s-token").value.trim();
 
-    if (password.length < MIN_LENGTH) return fail(`密码至少 ${MIN_LENGTH} 位`);
-    if (password !== password2) return fail("两次输入的密码不一样");
     if (!owner || !name) return fail("请填写 GitHub 用户名和仓库名");
     if (!token) return fail("请填写 GitHub 访问令牌");
 
@@ -371,6 +410,10 @@ function renderLock() {
       input.select();
       return;
     }
+    if (S.mode === "local") {
+      await startLocal();
+      return;
+    }
     const token = store.get(TOKEN_KEY, "");
     if (token) await startApp();
     else renderTokenGate();
@@ -463,6 +506,25 @@ function renderTokenGate() {
 
 /* ================================================================ 进入主界面 */
 
+/* 本地模式：直接从磁盘读，不走 GitHub */
+async function startLocal() {
+  S.root.innerHTML = `<div class="lock-wrap"><div class="boot"><span class="boot-dot"></span><p>正在读取本地文件…</p></div></div>`;
+  try {
+    const data = await S.backend.load();
+    S.site = data.site || {};
+    S.posts = data.posts && Array.isArray(data.posts.posts) ? data.posts : { version: 1, posts: [] };
+    S.baseSite = JSON.stringify(S.site);
+    S.basePosts = JSON.stringify(S.posts);
+  } catch (e) {
+    toast(`读取本地文件失败：${e.message}`, "err");
+    return;
+  }
+  applyDraftTheme();
+  S.tab = "content";
+  S.editingId = null;
+  renderShell();
+}
+
 async function startApp() {
   const cfg = repoConfig();
   const token = store.get(TOKEN_KEY, "");
@@ -505,6 +567,7 @@ const TABS = [
   { id: "content", label: "文章", icon: "doc" },
   { id: "appearance", label: "外观", icon: "palette" },
   { id: "site", label: "站点", icon: "settings" },
+  { id: "music", label: "音乐", icon: "music" },
   { id: "security", label: "安全", icon: "shield" },
 ];
 
@@ -512,6 +575,7 @@ function renderShell() {
   const s = S.site?.site || {};
   const cfg = repoConfig();
   const count = S.posts.posts.length;
+  const isLocal = S.mode === "local";
 
   S.root.innerHTML = `
   <div class="adm">
@@ -520,7 +584,7 @@ function renderShell() {
         <img src="${escapeHtml(s.avatar || "assets/img/avatar.svg")}" alt="" />
         <div>
           <b>${escapeHtml(s.title || "我的小站")}</b>
-          <span>控制台</span>
+          <span>${isLocal ? "本地控制台" : "控制台"}</span>
         </div>
       </div>
       <nav class="adm-nav">
@@ -532,8 +596,10 @@ function renderShell() {
         ).join("")}
       </nav>
       <div class="adm-side-foot">
-        <div class="repo-pill" title="${escapeHtml(cfg.owner)}/${escapeHtml(cfg.name)}">
-          ${icon("github")}<span>${escapeHtml(cfg.owner)}/${escapeHtml(cfg.name)}</span>
+        <div class="repo-pill" title="${isLocal ? "本地文件" : escapeHtml(cfg.owner) + "/" + escapeHtml(cfg.name)}">
+          ${icon(isLocal ? "home" : "github")}<span>${
+            isLocal ? "本地文件 · 一次提交" : `${escapeHtml(cfg.owner)}/${escapeHtml(cfg.name)}`
+          }</span>
         </div>
         <a href="#/" data-act="exit">${icon("eye")}<span>查看网站</span></a>
       </div>
@@ -546,8 +612,13 @@ function renderShell() {
         <div class="adm-acts">
           <span class="dirty">未保存</span>
           <button class="btn btn-line btn-sm" data-act="preview-mode" title="预览明暗（不影响保存的设置）">${icon(document.documentElement.dataset.mode === "dark" ? "sun" : "moon")}</button>
-          <button class="btn btn-line btn-sm" data-act="reload" title="从仓库重新读取">${icon("refresh")}</button>
-          <button class="btn btn-primary btn-sm" data-act="save">${icon("save")} 保存并发布</button>
+          <button class="btn btn-line btn-sm" data-act="reload" title="${isLocal ? "从磁盘重新读取" : "从仓库重新读取"}">${icon("refresh")}</button>
+          ${
+            isLocal
+              ? `<button class="btn btn-soft btn-sm" data-act="commit" title="把所有改动合成一个提交">${icon("check")} 提交<span class="git-n"></span></button>
+                 <button class="btn btn-primary btn-sm" data-act="save">${icon("save")} 保存到本地</button>`
+              : `<button class="btn btn-primary btn-sm" data-act="save">${icon("save")} 保存并发布</button>`
+          }
         </div>
       </header>
       <div class="adm-body" id="adm-body"></div>
@@ -555,6 +626,7 @@ function renderShell() {
   </div>`;
 
   renderTab();
+  if (isLocal) refreshGitBadge();
 }
 
 function setTab(tab) {
@@ -595,6 +667,7 @@ function renderTab() {
     content: "写下、修改、发布",
     appearance: "配色、字体、圆角，改了立刻能看到",
     site: "站点信息、导航、关于页面",
+    music: "用网易云音乐分享你在听的歌",
     security: "密码、令牌与仓库",
   };
   if (title) title.textContent = TABS.find((t) => t.id === S.tab)?.label || "";
@@ -604,11 +677,13 @@ function renderTab() {
   if (S.tab === "content") body.innerHTML = S.editingId ? editorHTML() : listHTML();
   else if (S.tab === "appearance") body.innerHTML = appearanceHTML();
   else if (S.tab === "site") body.innerHTML = siteHTML();
+  else if (S.tab === "music") body.innerHTML = musicHTML();
   else body.innerHTML = securityHTML();
 
   if (S.tab === "content" && S.editingId) wireEditor();
   if (S.tab === "appearance") wireAppearance();
   if (S.tab === "site") wireSite();
+  if (S.tab === "music") wireMusic();
   if (S.tab === "security") wireSecurity();
 
   updateDirtyBadge();
@@ -1020,8 +1095,8 @@ function mdAction(action, ta, { refresh, sync }) {
 /* ================================================================ 图片上传 */
 
 async function uploadImage(file, progressSel) {
-  if (!S.gh) {
-    toast("还没有连接仓库", "err");
+  if (S.mode === "local" ? !S.backend : !S.gh) {
+    toast(S.mode === "local" ? "本地服务没有连上" : "还没有连接仓库", "err");
     return "";
   }
   if (!file.type.startsWith("image/")) {
@@ -1062,7 +1137,11 @@ async function uploadImage(file, progressSel) {
     const base = slugify(currentPost()?.slug || currentPost()?.title || "image", "image");
     const path = `assets/uploads/${base}-${Date.now().toString(36)}.${ext}`;
 
-    await S.gh.putBinary(path, base64, `上传图片 ${path}`);
+    if (S.mode === "local") {
+      await S.backend.putImage(path, base64);
+    } else {
+      await S.gh.putBinary(path, base64, `上传图片 ${path}`);
+    }
     toast(`已上传（${(blob.size / 1024).toFixed(0)}KB）`);
     return path;
   } catch (e) {
@@ -1366,11 +1445,173 @@ function wireSite() {
   });
 }
 
+/* ================================================================ 音乐 */
+
+function ensureMusic() {
+  if (!S.site.music || typeof S.site.music !== "object") S.site.music = {};
+  const m = S.site.music;
+  if (!Array.isArray(m.songs)) m.songs = [];
+  if (typeof m.enabled !== "boolean") m.enabled = false;
+  if (typeof m.title !== "string") m.title = "最近在听";
+  if (typeof m.desc !== "string") m.desc = "";
+  if (typeof m.playlistId !== "string") m.playlistId = "";
+  return m;
+}
+
+function parseSongId(value) {
+  const s = String(value || "").trim();
+  const m = s.match(/[?&]id=(\d+)/) || s.match(/\/(\d{4,})(?:[/?#]|$)/) || s.match(/^(\d{4,})$/);
+  return m ? m[1] : "";
+}
+
+function songRowHTML(song, i) {
+  return `
+  <div class="song-edit" data-i="${i}">
+    <div class="song-edit-top">
+      <input class="input" data-song="id" value="${escapeHtml(song.id || "")}" placeholder="歌曲 ID" style="max-width:118px" />
+      <input class="input" data-song="name" value="${escapeHtml(song.name || "")}" placeholder="歌名" />
+      <input class="input" data-song="artist" value="${escapeHtml(song.artist || "")}" placeholder="歌手" />
+      <button class="mini danger" data-act="song-del" data-i="${i}" title="删除">${icon("trash")}</button>
+    </div>
+    <input class="input" data-song="cover" value="${escapeHtml(song.cover || "")}" placeholder="封面图片地址（可选，留空用渐变色）" style="margin-top:8px" />
+  </div>`;
+}
+
+function musicHTML() {
+  const m = ensureMusic();
+  const songs = m.songs;
+
+  return `
+  <div class="adm-tab">
+    <div class="panel">
+      <div class="panel-head">${icon("music")}<h2>音乐卡片</h2></div>
+      <p class="panel-desc">
+        用网易云音乐官方外链播放器。填歌曲 ID 或直接粘贴分享链接都行；封面不填会用主题色渐变占位。
+      </p>
+      <div class="grid2">
+        <div class="field"><label>标题</label><input class="input" data-bind="music.title" value="${escapeHtml(m.title)}" placeholder="最近在听" /></div>
+        <div class="field"><label>歌单 ID（可选）</label><input class="input" data-bind="music.playlistId" value="${escapeHtml(m.playlistId)}" placeholder="填了会在音乐页顶部显示整张歌单" /></div>
+      </div>
+      <div class="field"><label>描述</label><input class="input" data-bind="music.desc" value="${escapeHtml(m.desc)}" placeholder="一些最近在循环的歌" /></div>
+      <div style="display:flex;gap:22px;align-items:center;flex-wrap:wrap">
+        <label class="switch">
+          <input type="checkbox" data-bind="music.enabled" ${m.enabled ? "checked" : ""} />
+          <span class="track"></span><span class="txt">在首页显示音乐卡片</span>
+        </label>
+        <label class="switch">
+          <input type="checkbox" data-bind="music.embed" ${m.embed !== false ? "checked" : ""} />
+          <span class="track"></span><span class="txt">显示歌单播放器</span>
+        </label>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-head">${icon("plus")}<h2>歌曲</h2></div>
+      <p class="panel-desc">
+        在网易云里点「分享 → 复制链接」，形如 <code>https://music.163.com/song?id=1234567</code>，整段粘进来就会自动取出 ID。
+      </p>
+      <div class="input-group" style="margin-bottom:14px">
+        <input class="input" id="song-add" placeholder="粘贴歌曲链接或数字 ID，回车添加" />
+        <button class="btn btn-soft btn-sm" data-act="song-add">${icon("plus")} 添加</button>
+      </div>
+      <div class="repeater" id="song-repeater">
+        ${
+          songs.length
+            ? songs.map(songRowHTML).join("")
+            : `<div class="adm-empty" style="padding:26px"><b>还没有歌曲</b><span>把分享链接粘到上面就行</span></div>`
+        }
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-head">${icon("eye")}<h2>预览</h2></div>
+      <p class="panel-desc">前台卡片的真实样式；播放器要保存之后到前台才会加载。</p>
+      <div class="preview-frame" id="music-preview">
+        ${
+          musicSongs(S.site).length
+            ? `<div class="music-grid">${musicSongs(S.site).map(musicCardHTML).join("")}</div>`
+            : `<div class="empty" style="padding:30px"><b>加一首歌试试</b><span>卡片会显示歌名、歌手和一个播放按钮</span></div>`
+        }
+      </div>
+    </div>
+  </div>`;
+}
+
+function refreshMusicPreview() {
+  const box = $("#music-preview");
+  if (!box) return;
+  const songs = musicSongs(S.site);
+  box.innerHTML = songs.length
+    ? `<div class="music-grid">${songs.map(musicCardHTML).join("")}</div>`
+    : `<div class="empty" style="padding:30px"><b>加一首歌试试</b><span>卡片会显示歌名、歌手和一个播放按钮</span></div>`;
+}
+
+function addSong(raw) {
+  const m = ensureMusic();
+  const id = parseSongId(raw);
+  if (!id) return toast("没认出歌曲 ID，粘贴完整链接试试", "err");
+  if (m.songs.some((s) => String(s.id) === id)) return toast("这首歌已经在列表里了");
+  m.songs.push({ id, name: "", artist: "", cover: "" });
+  if (!m.enabled) m.enabled = true;
+  updateDirtyBadge();
+  renderTab();
+  toast("已添加，记得填上歌名和歌手");
+}
+
+function wireMusic() {
+  const addInput = $("#song-add");
+  addInput?.addEventListener("keydown", (e) => {
+    if (e.key !== "Enter") return;
+    e.preventDefault();
+    addSong(addInput.value);
+  });
+
+  const rep = $("#song-repeater");
+  if (!rep) return;
+
+  const refreshSoon = debounce(refreshMusicPreview, 220);
+
+  rep.addEventListener("input", (e) => {
+    const key = e.target.dataset?.song;
+    const row = e.target.closest("[data-i]");
+    if (!key || !row) return;
+    const song = S.site.music.songs[Number(row.dataset.i)];
+    if (!song) return;
+
+    if (key === "id") {
+      const id = parseSongId(e.target.value) || e.target.value.trim();
+      song.id = id;
+    } else {
+      song[key] = e.target.value;
+    }
+    updateDirtyBadge();
+    refreshSoon();
+  });
+
+  // 失焦时把粘贴的整段链接收成纯 ID
+  rep.addEventListener(
+    "blur",
+    (e) => {
+      if (e.target.dataset?.song !== "id") return;
+      const row = e.target.closest("[data-i]");
+      const id = parseSongId(e.target.value);
+      if (id && id !== e.target.value) {
+        e.target.value = id;
+        const song = S.site.music.songs[Number(row.dataset.i)];
+        if (song) song.id = id;
+        refreshSoon();
+      }
+    },
+    true
+  );
+}
+
 /* ================================================================ 安全 */
 
 function securityHTML() {
   const cfg = repoConfig();
   const auth = S.site?.admin?.auth || {};
+  const isLocal = S.mode === "local";
 
   return `
   <div class="adm-tab">
@@ -1378,7 +1619,9 @@ function securityHTML() {
       <div class="panel-head">${icon("key")}<h2>修改管理员密码</h2></div>
       <p class="panel-desc">
         当前密码以 PBKDF2-SHA256（${Number(auth.iterations || 600000).toLocaleString("zh-CN")} 次迭代）派生后保存在
-        <code>content/site.json</code>，仓库里没有明文。
+        <code>content/site.json</code>，仓库里没有明文。${
+          isLocal ? "在这里改完并提交后，网页版用的也是同一个密码。" : ""
+        }
       </p>
       <form id="pw-form">
         <div class="field" style="max-width:480px"><label>当前密码</label><input class="input" type="password" id="pw-old" autocomplete="current-password" /></div>
@@ -1394,30 +1637,49 @@ function securityHTML() {
       </form>
     </div>
 
-    <div class="panel">
-      <div class="panel-head">${icon("github")}<h2>仓库连接</h2></div>
-      <p class="panel-desc">改仓库以后，需要重新验证一次令牌。</p>
-      <div class="grid3">
-        <div class="field"><label>用户名</label><input class="input" id="repo-owner" value="${escapeHtml(cfg.owner)}" /></div>
-        <div class="field"><label>仓库名</label><input class="input" id="repo-name" value="${escapeHtml(cfg.name)}" /></div>
-        <div class="field"><label>分支</label><input class="input" id="repo-branch" value="${escapeHtml(cfg.branch)}" /></div>
-      </div>
-      <div class="field">
-        <label>访问令牌</label>
-        <div class="input-group">
-          <input class="input" type="password" id="repo-token" placeholder="留空表示继续用本机已保存的令牌" autocomplete="off" />
-          <button class="btn btn-line btn-sm" data-act="test-repo">${icon("refresh")} 测试</button>
-        </div>
-        <span class="hint">令牌只保存在这台设备。换设备时重新输入即可，仓库里不会有它。</span>
-      </div>
-      <button class="btn btn-soft btn-sm" data-act="save-repo">${icon("save")} 保存仓库信息</button>
-    </div>
+    ${
+      isLocal
+        ? `<div class="panel">
+             <div class="panel-head">${icon("home")}<h2>本地模式</h2></div>
+             <p class="panel-desc">
+               直接读写本目录下的 <code>content/site.json</code> 和 <code>content/posts.json</code>，
+               不经过 GitHub，也不需要令牌。改动攒起来，点右上角「提交」合成一个 commit。
+             </p>
+             <div class="link-list">
+               <div class="link-row">${icon("github")}<span>仓库 <b>${escapeHtml(cfg.owner || "?")}/${escapeHtml(
+                   cfg.name || "?"
+                 )}</b> · 分支 ${escapeHtml(cfg.branch || "main")}</span></div>
+               <div class="link-row">${icon("key")}<span>密码与网页版共用 <code>content/site.json</code> 里的同一份哈希</span></div>
+               <div class="link-row">${icon("lock")}<span>推送使用本机 git 凭据，不额外保存任何密钥</span></div>
+             </div>
+           </div>`
+        : `<div class="panel">
+             <div class="panel-head">${icon("github")}<h2>仓库连接</h2></div>
+             <p class="panel-desc">改仓库以后，需要重新验证一次令牌。</p>
+             <div class="grid3">
+               <div class="field"><label>用户名</label><input class="input" id="repo-owner" value="${escapeHtml(cfg.owner)}" /></div>
+               <div class="field"><label>仓库名</label><input class="input" id="repo-name" value="${escapeHtml(cfg.name)}" /></div>
+               <div class="field"><label>分支</label><input class="input" id="repo-branch" value="${escapeHtml(cfg.branch)}" /></div>
+             </div>
+             <div class="field">
+               <label>访问令牌</label>
+               <div class="input-group">
+                 <input class="input" type="password" id="repo-token" placeholder="留空表示继续用本机已保存的令牌" autocomplete="off" />
+                 <button class="btn btn-line btn-sm" data-act="test-repo">${icon("refresh")} 测试</button>
+               </div>
+               <span class="hint">令牌只保存在这台设备。换设备时重新输入即可，仓库里不会有它。</span>
+             </div>
+             <button class="btn btn-soft btn-sm" data-act="save-repo">${icon("save")} 保存仓库信息</button>
+           </div>`
+    }
 
     <div class="panel">
       <div class="panel-head">${icon("lock")}<h2>本机数据</h2></div>
-      <p class="panel-desc">清除令牌后，下次进入需要重新输入令牌（密码仍然有效）。</p>
+      <p class="panel-desc">${
+        isLocal ? "本地版不保存令牌，这里只清理浏览器的主题缓存。" : "清除令牌后，下次进入需要重新输入令牌（密码仍然有效）。"
+      }</p>
       <div style="display:flex;gap:10px;flex-wrap:wrap">
-        <button class="btn btn-line btn-sm" data-act="clear-token">${icon("trash")} 清除本机令牌</button>
+        ${isLocal ? "" : `<button class="btn btn-line btn-sm" data-act="clear-token">${icon("trash")} 清除本机令牌</button>`}
         <button class="btn btn-line btn-sm" data-act="clear-theme">${icon("refresh")} 清除主题缓存</button>
         <button class="btn btn-line btn-sm" data-act="logout">${icon("logout")} 退出控制台</button>
       </div>
@@ -1428,11 +1690,10 @@ function securityHTML() {
       <div class="notice warn" style="margin-bottom:0">
         ${icon("alert")}
         <div>
-          密码无法找回，只能重置：打开 GitHub 上
-          <b>${escapeHtml(cfg.owner || "你的账号")}/${escapeHtml(cfg.name || "仓库")}</b> 的
-          <code>content/site.json</code>，把 <code>"auth": { … }</code> 整段改成 <code>null</code> 并提交，
-          然后刷新这个页面，就会重新进入初始化流程。
-          <br />由于初始化需要写入令牌，别人无法抢先设置。
+          密码无法找回，只能重置：把 <code>content/site.json</code> 里的
+          <code>"auth": { … }</code> 整段改成 <code>null</code>${
+            isLocal ? "（本地版直接改文件即可）" : `并提交`
+          }，然后重新打开控制台，就会重新进入初始化流程。
         </div>
       </div>
     </div>
@@ -1513,10 +1774,6 @@ async function putFileWithRetry(gh, path, text, message) {
 
 async function saveAll() {
   if (S.busy) return;
-  if (!S.gh) {
-    toast("还没有连接仓库", "err");
-    return;
-  }
   const jobs = [];
   if (siteDirty()) {
     S.site.updatedAt = new Date().toISOString();
@@ -1530,6 +1787,13 @@ async function saveAll() {
 
   if (!jobs.length) {
     toast("没有需要保存的修改");
+    return;
+  }
+
+  if (S.mode === "local") return saveLocal(jobs);
+
+  if (!S.gh) {
+    toast("还没有连接仓库", "err");
     return;
   }
 
@@ -1566,6 +1830,148 @@ async function saveAll() {
   }
 }
 
+/* ================================================================ 本地模式：写入与提交 */
+
+async function saveLocal(jobs) {
+  S.busy = true;
+  const btn = $('[data-act="save"]');
+  const old = btn?.innerHTML;
+  btn?.classList.add("is-busy");
+  if (btn) btn.innerHTML = `${icon("refresh")} 写入中…`;
+
+  try {
+    for (const job of jobs) await S.backend.writeFile(job.path, job.text);
+    S.baseSite = JSON.stringify(S.site);
+    S.basePosts = JSON.stringify(S.posts);
+    updateDirtyBadge();
+    await refreshGitBadge();
+    toast("已保存到本地文件，点「提交」生成一次 commit");
+  } catch (e) {
+    toast(e?.message || "写入失败", "err");
+    console.error(e);
+  } finally {
+    S.busy = false;
+    btn?.classList.remove("is-busy");
+    if (btn && old) btn.innerHTML = old;
+  }
+}
+
+async function refreshGitBadge() {
+  if (S.mode !== "local" || !S.backend) return;
+  try {
+    const info = await S.backend.git();
+    const btn = $('[data-act="commit"]');
+    const badge = $(".git-n");
+    const n = info.changes?.length || 0;
+    if (badge) badge.textContent = n ? ` · ${n}` : "";
+    if (btn) btn.classList.toggle("has-changes", n > 0);
+  } catch {}
+}
+
+function defaultCommitMessage(files) {
+  const paths = new Set(files.map((f) => f.path));
+  if (paths.size === 1 && paths.has(POSTS_FILE)) return "更新文章";
+  if (paths.size === 1 && paths.has(REPO_FILE)) return "更新站点设置";
+  return "更新站点与文章";
+}
+
+async function openCommitDialog() {
+  if (S.mode !== "local" || S.busy) return;
+  if (isDirty()) {
+    toast("还有改动没保存到本地，先点「保存到本地」");
+    return;
+  }
+
+  let info = { changes: [], branch: "" };
+  try {
+    info = await S.backend.git();
+  } catch (e) {
+    toast(e?.message || "读取 git 状态失败", "err");
+    return;
+  }
+  const files = info.changes || [];
+  if (!files.length) {
+    toast("没有需要提交的改动");
+    return;
+  }
+
+  const layer = document.createElement("div");
+  layer.className = "modal-layer";
+  layer.innerHTML = `
+    <div class="modal" role="dialog" aria-modal="true" style="width:min(540px,100%)">
+      <h3>提交到本地仓库</h3>
+      <p>下面 ${files.length} 个文件的改动会合并成 <b>一个</b> commit${info.branch ? `（分支 ${escapeHtml(info.branch)}）` : ""}。</p>
+      <div class="commit-files">
+        ${files
+          .slice(0, 24)
+          .map(
+            (f) =>
+              `<div class="commit-row"><span class="commit-code">${escapeHtml(f.code || "M")}</span><span>${escapeHtml(
+                f.path
+              )}</span></div>`
+          )
+          .join("")}
+        ${files.length > 24 ? `<div class="commit-row more">…还有 ${files.length - 24} 个</div>` : ""}
+      </div>
+      <div class="field" style="margin-top:14px">
+        <label for="commit-msg">提交信息</label>
+        <input class="input" id="commit-msg" value="${escapeHtml(defaultCommitMessage(files))}" />
+      </div>
+      <label class="switch">
+        <input type="checkbox" id="commit-push" />
+        <span class="track"></span><span class="txt">提交后顺便推送到 GitHub（用本机 git 凭据）</span>
+      </label>
+      <div class="modal-acts">
+        <button class="btn btn-ghost" data-x="cancel">取消</button>
+        <button class="btn btn-primary" data-x="ok">提交</button>
+      </div>
+    </div>`;
+
+  const close = () => {
+    layer.classList.add("out");
+    setTimeout(() => layer.remove(), 180);
+    document.removeEventListener("keydown", onKey);
+  };
+  const onKey = (e) => {
+    if (e.key === "Escape") close();
+    if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) layer.querySelector('[data-x="ok"]')?.click();
+  };
+
+  layer.addEventListener("click", async (e) => {
+    e.stopPropagation();
+    if (e.target === layer) return close();
+    const act = e.target.closest("[data-x]")?.dataset.x;
+    if (act === "cancel") return close();
+    if (act !== "ok") return;
+
+    const msg = $("#commit-msg").value.trim() || "更新站点内容";
+    const push = $("#commit-push").checked;
+    const btn = layer.querySelector('[data-x="ok"]');
+    btn.classList.add("is-busy");
+    btn.textContent = "提交中…";
+
+    try {
+      const res = await S.backend.commit(msg, push);
+      close();
+      toast(`已提交 ${res.sha}（${res.files} 个文件）`, "ok", 3600);
+      if (push && !res.pushed) {
+        setTimeout(() => toast(`提交成功，但推送失败：${res.pushError || "可以在终端手动 git push"}`, "err", 6000), 500);
+      }
+      await refreshGitBadge();
+      S.ctx.reload?.();
+    } catch (err) {
+      toast(err?.message || "提交失败", "err", 5000);
+      btn.classList.remove("is-busy");
+      btn.textContent = "提交";
+    }
+  });
+
+  document.addEventListener("keydown", onKey);
+  document.body.appendChild(layer);
+  requestAnimationFrame(() => layer.classList.add("in"));
+  layer.querySelector("#commit-msg").select();
+}
+
 /* ================================================================ 全局事件 */
 
 function bindGlobalEvents() {
@@ -1586,6 +1992,9 @@ function bindGlobalEvents() {
       switch (act) {
         case "save":
           saveAll();
+          break;
+        case "commit":
+          openCommitDialog();
           break;
         case "reload":
           reloadFromRepo();
@@ -1707,6 +2116,19 @@ function bindGlobalEvents() {
           updateDirtyBadge();
           renderTab();
           break;
+        case "song-add":
+          addSong($("#song-add")?.value || "");
+          break;
+        case "song-del": {
+          const idx = Number(e.target.closest("[data-i]")?.dataset.i);
+          if (Number.isInteger(idx)) {
+            ensureMusic();
+            S.site.music.songs.splice(idx, 1);
+            updateDirtyBadge();
+            renderTab();
+          }
+          break;
+        }
         case "test-repo":
           testRepo();
           break;
@@ -1819,14 +2241,20 @@ function bindGlobalEvents() {
 }
 
 async function reloadFromRepo() {
+  const isLocal = S.mode === "local";
   if (isDirty()) {
     const ok = await confirmDialog({
-      title: "重新读取会丢掉修改",
-      message: "仓库里的内容会覆盖当前未保存的修改，确定吗？",
+      title: isLocal ? "重新读取会丢掉修改" : "重新读取会丢掉修改",
+      message: isLocal ? "磁盘上的内容会覆盖当前未保存的修改，确定吗？" : "仓库里的内容会覆盖当前未保存的修改，确定吗？",
       okText: "重新读取",
       danger: true,
     });
     if (!ok) return;
+  }
+  if (isLocal) {
+    await startLocal();
+    toast("已从磁盘重新读取");
+    return;
   }
   await startApp();
   toast("已从仓库重新读取");

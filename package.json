@@ -6,6 +6,7 @@
   "type": "module",
   "scripts": {
     "serve": "node scripts/serve.mjs 5173",
+    "console": "node scripts/console.mjs",
     "shot": "node scripts/shot.mjs"
   },
   "devDependencies": {

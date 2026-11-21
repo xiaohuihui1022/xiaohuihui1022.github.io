@@ -568,6 +568,51 @@ kbd.code { font-family: var(--font-mono); font-size: 11.5px; padding: 2px 6px; b
   100% { transform: translateX(340%); }
 }
 
+/* 提交对话框 */
+.git-n { font-family: var(--font-display); font-size: 11px; opacity: 0.85; }
+.btn.has-changes { box-shadow: 0 0 0 3px var(--accent-soft); }
+.commit-files {
+  max-height: 190px;
+  overflow: auto;
+  padding: 8px;
+  border: 1px solid var(--line-soft);
+  border-radius: 10px;
+  background: var(--surface-2);
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+.commit-row {
+  display: flex;
+  gap: 10px;
+  align-items: baseline;
+  padding: 3px 6px;
+  border-radius: 6px;
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  color: var(--text-2);
+  word-break: break-all;
+}
+.commit-row:hover { background: var(--surface); }
+.commit-code { color: var(--accent-text); font-weight: 600; min-width: 16px; flex: none; }
+.commit-row.more { font-family: var(--font-body); color: var(--text-3); }
+
+/* 音乐编辑行 */
+.song-edit {
+  padding: 10px;
+  border: 1px solid var(--line-soft);
+  border-radius: 12px;
+  background: var(--surface-2);
+}
+.song-edit-top { display: flex; gap: 8px; align-items: center; }
+.song-edit-top .input { min-width: 0; }
+.song-edit-top .input:nth-of-type(2) { flex: 1.4; }
+.song-edit-top .input:nth-of-type(3) { flex: 1; }
+@media (max-width: 760px) {
+  .song-edit-top { flex-wrap: wrap; }
+  .song-edit-top .input { flex: 1 1 40%; max-width: none !important; }
+}
+
 /* ---------------------------------------------------------------- 响应式 */
 @media (max-width: 980px) {
   .adm { grid-template-columns: 1fr; }

@@ -20,9 +20,76 @@ fs.mkdirSync(SHOTS, { recursive: true });
 const b64 = (s) => Buffer.from(s, "utf8").toString("base64");
 const unb64 = (s) => Buffer.from(s, "base64").toString("utf8");
 
+/* 测试用的固定内容：不依赖站点里当前实际有哪些文章 */
+const FIXTURE_POSTS = {
+  version: 1,
+  updatedAt: "2026-01-01T00:00:00.000Z",
+  posts: [
+    {
+      id: "t1",
+      slug: "fixture-hello",
+      title: "第一篇：置顶的测试文章",
+      date: "2026-11-18",
+      tags: ["随笔", "测试"],
+      cover: "assets/img/cover-1.svg",
+      excerpt: "这是一篇用于自动化测试的置顶文章。",
+      pinned: true,
+      draft: false,
+      body: "## 第一节\n\n正文内容，用来验证目录生成。\n\n## 第二节\n\n再写一点东西，聊一聊 CSS 和排版。\n\n## 第三节\n\n最后一节，收个尾。",
+    },
+    {
+      id: "t2",
+      slug: "fixture-css",
+      title: "第二篇：关于 CSS 的测试",
+      date: "2026-11-12",
+      tags: ["前端", "CSS"],
+      cover: "assets/img/cover-2.svg",
+      excerpt: "第二篇测试文章的摘要。",
+      draft: false,
+      body: "## 小标题\n\nCSS 的一些小事。\n\n```css\nbody { color: red }\n```\n",
+    },
+    {
+      id: "t3",
+      slug: "fixture-life",
+      title: "第三篇：生活碎片",
+      date: "2026-10-28",
+      tags: ["生活"],
+      cover: "",
+      excerpt: "没有封面的文章。",
+      draft: false,
+      body: "随便写点什么。\n\n> 引用一句。\n",
+    },
+    {
+      id: "t4",
+      slug: "fixture-draft",
+      title: "一篇草稿",
+      date: "2026-11-20",
+      tags: ["草稿"],
+      cover: "",
+      excerpt: "",
+      draft: true,
+      body: "草稿内容。",
+    },
+    {
+      id: "t5",
+      slug: "fixture-more",
+      title: "第四篇：再凑一篇",
+      date: "2026-09-15",
+      tags: ["日常", "测试"],
+      cover: "",
+      excerpt: "为了让列表里有三张卡片。",
+      draft: false,
+      body: "凑数的一篇。\n\n## 小标题\n\n内容。\n",
+    },
+  ],
+};
+
+const siteFixture = JSON.parse(fs.readFileSync(path.join(root, "content/site.json"), "utf8"));
+siteFixture.admin = { repo: { owner: "tester", name: "my-blog", branch: "main" }, auth: null };
+
 const repo = {
-  "content/site.json": null,
-  "content/posts.json": fs.readFileSync(path.join(root, "content/posts.json"), "utf8"),
+  "content/site.json": JSON.stringify(siteFixture),
+  "content/posts.json": JSON.stringify(FIXTURE_POSTS),
 };
 const shas = { "content/posts.json": "sha-posts-1" };
 let shaSeq = 0;
@@ -112,9 +179,13 @@ async function main() {
   /* 模拟「GitHub Pages 已经重新部署」：站点静态 JSON 跟着仓库内容走 */
   await page.route(/\/content\/(site|posts)\.json(\?.*)?$/, async (route) => {
     const key = route.request().url().includes("posts.json") ? "content/posts.json" : "content/site.json";
-    if (repo[key] == null) return route.continue();
     return route.fulfill({ status: 200, contentType: "application/json", body: repo[key] });
   });
+
+  /* 网易云播放器在测试里不需要真的加载 */
+  await page.route(/music\.163\.com/, (route) =>
+    route.fulfill({ status: 200, contentType: "text/html", body: "<!doctype html><title>stub</title>" })
+  );
 
   await page.route("https://api.github.com/**", async (route) => {
     const req = route.request();
@@ -275,7 +346,8 @@ async function main() {
   step("切换主题预设即时生效", accent.toLowerCase() === "#6cc3a9", `--accent=${accent}`);
   await shot("09-admin-mint.png");
 
-  await page.click('[data-preset="sakura"]');
+  // 切回站点原本的预设，避免残留「未保存」挡住后面的切换
+  await page.click(`[data-preset="${siteFixture.theme?.preset || "sakura"}"]`);
 
   /* 面板里的明暗预览 */
   await page.click('[data-act="preview-mode"]');
@@ -326,11 +398,45 @@ async function main() {
   const badOld = await page.evaluate(() => document.querySelector(".toast.err")?.textContent || "");
   step("改密码时校验旧密码", badOld.includes("当前密码不对"), badOld.trim());
 
+  /* ---------------------------------------------------------- 音乐 */
+  await page.click('[data-tab="music"]');
+  await page.waitForSelector("#song-add");
+  await page.fill("#song-add", "https://music.163.com/song?id=1234567");
+  await page.click('[data-act="song-add"]');
+  await page.waitForTimeout(400);
+  const songId = await page.locator('[data-song="id"]').first().inputValue();
+  step("粘贴分享链接能解析出歌曲 ID", songId === "1234567", songId);
+
+  await page.fill('[data-song="name"]', "测试歌曲");
+  await page.fill('[data-song="artist"]', "测试歌手");
+  await page.waitForTimeout(400);
+  step("音乐预览出现卡片", (await page.locator("#music-preview .song").count()) === 1);
+  await shot("11b-admin-music.png");
+
+  await page.click('[data-act="save"]');
+  await page.waitForTimeout(1600);
+  const musicSite = JSON.parse(repo["content/site.json"] || "{}");
+  step("音乐配置写入 site.json", Boolean(musicSite.music?.songs?.length), `${musicSite.music?.songs?.length || 0} 首`);
+
   /* ---------------------------------------------------------- 发布后的前台 */
   await page.goto(BASE, { waitUntil: "networkidle" });
   await page.waitForSelector(".card");
   const onSite = await page.locator(".card-title", { hasText: "测试文章" }).count();
   step("发布后前台立即能看到", onSite >= 1);
+
+  /* 前台音乐 */
+  step("有音乐后导航自动出现「音乐」", (await page.locator('.nav a:has-text("音乐")').count()) === 1);
+  step("首页出现音乐卡片", (await page.locator(".music-grid .song").count()) >= 1);
+  await page.locator(".music-grid .song-play").first().click();
+  await page.waitForTimeout(500);
+  step("点播放会嵌入网易云播放器", (await page.locator(".song-player iframe").count()) === 1);
+  await page.evaluate(() => {
+    location.hash = "#/music";
+  });
+  await page.waitForSelector(".music-list");
+  step("音乐页可以打开", (await page.locator(".music-list .song").count()) >= 1);
+  await shot("11c-music-page.png");
+  await page.goto(BASE, { waitUntil: "networkidle" });
 
   /* ---------------------------------------------------------- 二次访问需要密码 */
   await page.evaluate(() => localStorage.removeItem("blog.gh.token"));
@@ -400,6 +506,16 @@ async function main() {
   });
   const mp = await mobile.newPage();
   mp.on("pageerror", (err) => errors.push(`mobile pageerror: ${err.message}`));
+
+  // 手机端也要用同一份测试内容，否则空站点没有卡片可测
+  await mp.route(/\/content\/(site|posts)\.json(\?.*)?$/, (route) => {
+    const key = route.request().url().includes("posts.json") ? "content/posts.json" : "content/site.json";
+    return route.fulfill({ status: 200, contentType: "application/json", body: repo[key] });
+  });
+  await mp.route(/music\.163\.com/, (route) =>
+    route.fulfill({ status: 200, contentType: "text/html", body: "<!doctype html><title>stub</title>" })
+  );
+
   await mp.goto(BASE, { waitUntil: "networkidle" });
   await mp.waitForSelector(".card");
   await mp.waitForTimeout(700);

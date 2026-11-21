@@ -13,6 +13,7 @@ import {
   tagsHTML,
   tagHTML,
   aboutHTML,
+  musicPageHTML,
   missingHTML,
   published,
   orderedPosts,
@@ -89,6 +90,7 @@ function parseRoute() {
   if (a === "archive") return { name: "archive", path: "/archive" };
   if (a === "tags") return { name: "tags", path: "/tags" };
   if (a === "about") return { name: "about", path: "/about" };
+  if (a === "music") return { name: "music", path: "/music" };
   if (a === "admin") return { name: "admin", path: "/admin" };
   return { name: "missing", path: `/${a}` };
 }
@@ -119,6 +121,8 @@ function viewHTML() {
       return tagHTML({ site, posts, tag: route.tag });
     case "about":
       return aboutHTML({ site });
+    case "music":
+      return musicPageHTML({ site });
     default:
       return missingHTML({ what: "页面" });
   }
@@ -142,7 +146,7 @@ function render({ scroll = true } = {}) {
   } else if (route.name === "home") {
     document.title = baseTitle;
   } else {
-    document.title = `${baseTitle} · ${route.name === "archive" ? "归档" : route.name === "tags" ? "标签" : route.name === "about" ? "关于" : route.name === "tag" ? route.tag : "页面"}`;
+    document.title = `${baseTitle} · ${route.name === "archive" ? "归档" : route.name === "tags" ? "标签" : route.name === "about" ? "关于" : route.name === "music" ? "音乐" : route.name === "tag" ? route.tag : "页面"}`;
   }
 
   afterRender();
@@ -541,6 +545,48 @@ function initPetals() {
   state.petals = { start, stop, resize };
 }
 
+/* ------------------------------------------------------------ 音乐播放 */
+
+function stopSong(host) {
+  if (!host) return;
+  host.innerHTML = "";
+  delete host.dataset.current;
+}
+
+function playSong(btn) {
+  const id = btn.dataset.play;
+  if (!id) return;
+  const card = btn.closest(".song");
+  const host = card?.querySelector(".song-player") || $("#music-player");
+  if (!host) return;
+
+  // 再点一次同一首 = 停止
+  if (host.dataset.current === id) {
+    stopSong(host);
+    card?.classList.remove("is-playing");
+    btn.innerHTML = icon("play");
+    return;
+  }
+
+  // 同一时间只放一首：把其它卡片和顶部播放器清掉
+  $$(".song").forEach((el) => {
+    el.classList.remove("is-playing");
+    const b = el.querySelector("[data-play]");
+    if (b) b.innerHTML = icon("play");
+    const h = el.querySelector(".song-player");
+    if (h && h !== host) stopSong(h);
+  });
+  const top = $("#music-player");
+  if (top && top !== host) stopSong(top);
+
+  host.dataset.current = id;
+  host.innerHTML = `<iframe class="music-frame" title="网易云音乐播放器" src="https://music.163.com/outchain/player?type=2&id=${encodeURIComponent(
+    id
+  )}&auto=1&height=66" height="66" frameborder="no" loading="lazy" allow="autoplay"></iframe>`;
+  card?.classList.add("is-playing");
+  btn.innerHTML = icon("pause");
+}
+
 /* ------------------------------------------------------------ 顶栏交互 */
 
 function initChromeEvents() {
@@ -548,6 +594,13 @@ function initChromeEvents() {
     const searchBtn = e.target.closest("#btn-search");
     if (searchBtn) {
       search.show();
+      return;
+    }
+
+    const playBtn = e.target.closest("[data-play]");
+    if (playBtn) {
+      e.preventDefault();
+      playSong(playBtn);
       return;
     }
 
