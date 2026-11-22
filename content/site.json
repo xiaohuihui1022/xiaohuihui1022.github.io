@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updatedAt": "2026-11-22T08:22:06.869Z",
+  "updatedAt": "2026-11-22T09:21:15.085Z",
   "site": {
     "title": "灰灰の小站",
     "subtitle": "把喜欢的事，慢慢写下来",
@@ -87,9 +87,9 @@
       }
     ],
     "enabled": true,
-    "title": "The Best",
-    "desc": "好听(OuO)",
-    "playlistId": "7384210991",
+    "title": "每日音乐",
+    "desc": "好听(OuO)，每天更新（大概？）",
+    "playlistId": "",
     "embed": false
   }
 }
