@@ -775,8 +775,8 @@ function listHTML() {
     }
 
     <p class="panel-desc" style="margin-top:22px">
-      提示：文章保存在 <code>content/posts.json</code>，每次保存都会生成一次 Git 提交，
-      GitHub Pages 通常 30–60 秒后更新。
+      一篇文章一个文件（<code>content/posts/&lt;标签&gt;/&lt;slug&gt;.json</code>），列表读
+      <code>content/posts/index.json</code>。每次保存只提交改动的那几个文件，GitHub Pages 通常 30–60 秒后更新。
     </p>
   </div>`;
 }
@@ -944,6 +944,7 @@ function editorHTML() {
       <button class="btn btn-line" data-act="back-list">取消</button>
       <div class="spacer"></div>
       <span class="stat">${words} 字 · 约 ${readingTime(p.body || "")} 分钟</span>
+      <span class="stat stat-path" title="保存后会写到这里">${escapeHtml(postPath(p))}</span>
     </div>
 
     <input type="file" accept="image/*" id="cover-file" hidden />
@@ -972,6 +973,15 @@ function wireEditor() {
     updateDirtyBadge();
   };
 
+  // 底部那行「会存到哪个文件」跟着标题/标签实时变
+  const syncPath = () => {
+    const el = $(".stat-path");
+    if (el) {
+      el.textContent = postPath(p);
+      el.title = postPath(p);
+    }
+  };
+
   ta.addEventListener("input", () => {
     sync();
     refreshSoon();
@@ -995,12 +1005,14 @@ function wireEditor() {
       p.slug = slugify(e.target.value, "");
       slugInput.value = p.slug;
     }
+    syncPath();
     updateDirtyBadge();
   });
 
   $("#e-slug").addEventListener("input", (e) => {
     p.slug = e.target.value.trim();
     p.slugTouched = true;
+    syncPath();
     updateDirtyBadge();
   });
 
@@ -1011,6 +1023,7 @@ function wireEditor() {
 
   $("#e-tags").addEventListener("input", (e) => {
     p.tags = parseTags(e.target.value);
+    syncPath();
     updateDirtyBadge();
   });
 
