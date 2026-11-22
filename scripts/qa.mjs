@@ -9,6 +9,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { chromium } from "playwright-core";
 import { INDEX_FILE, postPath, toMeta } from "../assets/js/posts.js";
+import { relTime } from "../assets/js/core.js";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const BASE = process.env.BASE || "http://127.0.0.1:5173/";
@@ -30,7 +31,7 @@ const FIXTURE_POSTS = {
       id: "t1",
       slug: "fixture-hello",
       title: "第一篇：置顶的测试文章",
-      date: "2026-11-18",
+      date: "2026-09-01",
       tags: ["随笔", "测试"],
       cover: "assets/img/cover-1.svg",
       excerpt: "这是一篇用于自动化测试的置顶文章。",
@@ -300,6 +301,17 @@ async function main() {
   const hasFeatured = await page.locator(".featured").count();
   step("首页渲染文章卡片", cards >= 3, `${cards} 张卡片 + ${hasFeatured} 个头条`);
   step("置顶文章出现在头条", hasFeatured === 1);
+
+  // 「最近更新」要按日期算，不能跟着置顶走（置顶的可能是很早的一篇）
+  const pubPosts = FIXTURE_POSTS.posts.filter((p) => !p.draft);
+  const newest = pubPosts.slice().sort((a, b) => String(b.date).localeCompare(String(a.date)))[0];
+  const pinnedPost = pubPosts.find((p) => p.pinned);
+  const badgeText = ((await page.textContent(".hero-badge")) || "").trim();
+  step(
+    "最近更新取最新的一篇，而不是置顶的",
+    badgeText.includes(relTime(newest.date)) && !badgeText.includes(relTime(pinnedPost.date)),
+    badgeText
+  );
 
   const pageTitle = await page.title();
   step("页面标题来自配置", pageTitle.includes(siteFixture.site.title), pageTitle);

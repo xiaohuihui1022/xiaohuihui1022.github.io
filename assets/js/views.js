@@ -145,6 +145,8 @@ export function homeHTML({ site, posts, page = 1 }) {
   const ordered = orderedPosts(posts);
   const pinned = ordered.filter((p) => p.pinned);
   const head = pinned[0] || ordered[0];
+  // 「最近更新」按日期算，跟置顶无关——置顶的可能是很早以前那篇
+  const latest = published(posts).slice().sort(byDateDesc)[0];
 
   // 置顶文章占据头条位，其余按分页排布
   const rest = ordered.filter((p) => p !== head);
@@ -154,13 +156,12 @@ export function homeHTML({ site, posts, page = 1 }) {
 
   const tags = allTags(posts);
   const s = site.site || {};
-  const last = ordered[0];
 
   const hero = `
   <section class="hero">
     <div class="hero-text">
       <span class="hero-badge"><span class="dot"></span>${
-        last ? `最近更新 · ${relTime(last.date)}` : "刚刚开张，欢迎来坐坐"
+        latest ? `最近更新 · ${relTime(latest.date)}` : "刚刚开张，欢迎来坐坐"
       }</span>
       <h1>你好，我是<br /><span class="soft">${escapeHtml(s.author || s.title || "小站主人")}</span>。</h1>
       <p class="hero-desc">${escapeHtml(s.bio || s.description || s.subtitle || "在这里记录代码、生活和一些没什么用的小事。")}</p>
