@@ -41,7 +41,10 @@ export function inline(text) {
       const url = safeUrl(src, "");
       if (!url) return whole;
       const cap = title ? `<figcaption>${alt || title}</figcaption>` : alt ? `<figcaption>${alt}</figcaption>` : "";
-      const img = `<img src="${url}" alt="${alt}" loading="lazy" decoding="async"${title ? ` title="${title}"` : ""} />`;
+      // referrerpolicy：不少图床（尤其是镜像站）会按 Referer 防盗链，不发送来源通常能放行
+      const img = `<img src="${url}" alt="${alt}" loading="lazy" decoding="async" referrerpolicy="no-referrer"${
+        title ? ` title="${title}"` : ""
+      } />`;
       return keep(cap ? `<figure>${img}${cap}</figure>` : img);
     }
   );

@@ -185,9 +185,38 @@ function render({ scroll = true } = {}) {
 function afterRender() {
   hydrateMusic(APP, state.site);
   wireCodeCopy();
+  wireImageFallback();
   buildToc();
   updateReadProgress();
 }
+
+/* 正文图片加载失败时给个明确提示，而不是一个碎图标 */
+function wireImageFallback() {
+  if (STATE_IMG_BOUND) return;
+  STATE_IMG_BOUND = true;
+  APP.addEventListener(
+    "error",
+    (e) => {
+      const img = e.target;
+      if (!(img instanceof HTMLImageElement)) return;
+      if (!img.closest(".prose")) return;
+      if (img.dataset.fallback) return;
+      img.dataset.fallback = "1";
+
+      const src = img.getAttribute("src") || "";
+      const box = document.createElement("div");
+      box.className = "img-fail";
+      box.innerHTML = `<span>图片没能加载（图床可能禁止了跨站引用）</span>${
+        src ? `<a href="${escapeHtml(src)}" target="_blank" rel="noopener noreferrer">在新标签打开</a>` : ""
+      }`;
+      // 图片常常被包在 <a> 里（[![图](src)](页面)），整个换掉，避免 <a> 套 <a>
+      const target = img.closest("a") || img;
+      target.replaceWith(box);
+    },
+    true
+  );
+}
+let STATE_IMG_BOUND = false;
 
 /* ------------------------------------------------------------ 代码块复制 */
 

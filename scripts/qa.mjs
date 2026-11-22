@@ -86,6 +86,8 @@ const FIXTURE_POSTS = {
 
 const siteFixture = JSON.parse(fs.readFileSync(path.join(root, "content/site.json"), "utf8"));
 siteFixture.admin = { repo: { owner: "tester", name: "my-blog", branch: "main" }, auth: null };
+// 音乐相关断言需要从「空的」开始，不受站点实际配置影响
+siteFixture.music = { enabled: false, title: "最近在听", desc: "", playlistId: "", songs: [] };
 
 const repo = {
   "content/site.json": JSON.stringify(siteFixture),
@@ -187,6 +189,15 @@ async function main() {
     route.fulfill({ status: 200, contentType: "text/html", body: "<!doctype html><title>stub</title>" })
   );
 
+  /* 用来验证图片加载失败的兜底 */
+  await page.route(/fail\.example/, (route) => route.abort());
+  /* 一张能正常加载的 1x1 图，用来验证 img 属性 */
+  const TINY_PNG = Buffer.from(
+    "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==",
+    "base64"
+  );
+  await page.route(/ok\.example/, (route) => route.fulfill({ status: 200, contentType: "image/png", body: TINY_PNG }));
+
   await page.route("https://api.github.com/**", async (route) => {
     const req = route.request();
     const url = new URL(req.url());
@@ -247,7 +258,7 @@ async function main() {
   step("置顶文章出现在头条", hasFeatured === 1);
 
   const pageTitle = await page.title();
-  step("页面标题来自配置", pageTitle.includes("灰灰的小站"), pageTitle);
+  step("页面标题来自配置", pageTitle.includes(siteFixture.site.title), pageTitle);
 
   await shot("01-home-light.png");
 
@@ -374,13 +385,17 @@ async function main() {
   await md.scrollIntoViewIfNeeded();
   await md.click();
   await md.fill(
-    "## 小标题\n\n这是**加粗**、*斜体*和 `行内代码`。\n\n- 第一项\n- 第二项\n\n> 引用一句话\n\n{{music:1234567}}\n\n| 列 | 值 |\n| --- | --- |\n| a | 1 |\n"
+    "## 小标题\n\n这是**加粗**、*斜体*和 `行内代码`。\n\n- 第一项\n- 第二项\n\n> 引用一句话\n\n{{music:1234567}}\n\n![好图](https://ok.example/a.png)\n\n![会失败的图](https://fail.example/x.png)\n\n| 列 | 值 |\n| --- | --- |\n| a | 1 |\n"
   );
   await page.waitForTimeout(400);
   const previewText = await page.textContent("#md-preview-body");
   step("编辑器实时预览 Markdown", previewText.includes("小标题") && previewText.includes("行内代码"));
   step("预览支持表格", (await page.locator("#md-preview-body table").count()) === 1);
   step("正文里的 {{music:ID}} 会渲染成卡片", (await page.locator("#md-preview-body .music-inline .song").count()) === 1);
+  step(
+    "图片带 no-referrer 策略（绕开部分图床防盗链）",
+    (await page.locator('#md-preview-body img[referrerpolicy="no-referrer"]').count()) >= 1
+  );
 
   // 字色
   await page.locator("#md-input").evaluate((el) => {
@@ -473,6 +488,7 @@ async function main() {
     }, created.slug);
     await page.waitForSelector(".post-title");
     step("文章正文里的音乐卡片会显示", (await page.locator(".prose .music-inline .song").count()) === 1);
+    step("图片加载失败会给出提示", (await page.locator(".prose .img-fail").count()) >= 1);
   }
 
   /* ---------------------------------------------------------- 小游戏 */
