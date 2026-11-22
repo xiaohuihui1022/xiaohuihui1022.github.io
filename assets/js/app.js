@@ -3,6 +3,7 @@
 import { $, $$, escapeHtml, icon, toast, store, debounce, copyText, fmtDot } from "./core.js";
 import { applyTheme, toggleMode, PRESETS } from "./theme.js";
 import { renderMarkdown, extractToc } from "./markdown.js";
+import { INDEX_FILE, metasFromLegacy } from "./posts.js";
 import {
   applyChrome,
   setActiveNav,
@@ -29,7 +30,9 @@ const APP = $("#app");
 
 const state = {
   site: null,
-  posts: [],
+  index: [],
+  postCache: new Map(),
+  legacy: false,
   route: { name: "home", path: "/" },
   mode: "light",
   admin: null,
@@ -67,14 +70,37 @@ function normalizeSitePayload(raw) {
 }
 
 async function loadContent({ bust = false } = {}) {
-  const [siteRaw, postsRaw] = await Promise.all([
-    fetchJSON("content/site.json", bust),
-    fetchJSON("content/posts.json", bust),
-  ]);
+  const siteRaw = await fetchJSON("content/site.json", bust);
   state.siteRaw = siteRaw || {};
   state.site = normalizeSitePayload(siteRaw);
-  state.posts = Array.isArray(postsRaw.posts) ? postsRaw.posts : [];
-  state.postsRaw = postsRaw || { posts: [] };
+
+  // 新结构：索引里只有元信息；旧结构：单个 posts.json
+  try {
+    const raw = await fetchJSON(INDEX_FILE, bust);
+    state.index = Array.isArray(raw.posts) ? raw.posts : [];
+    state.legacy = false;
+  } catch (e) {
+    const raw = await fetchJSON("content/posts.json", bust).catch(() => ({ posts: [] }));
+    const posts = Array.isArray(raw.posts) ? raw.posts : [];
+    state.index = metasFromLegacy(posts);
+    state.legacy = true;
+    // 旧结构下正文已经在手上，顺手放进缓存
+    for (const p of posts) state.postCache.set(p.slug || p.id, p);
+  }
+}
+
+/* 取一篇文章的正文（按索引里的 path） */
+async function loadPost(meta) {
+  const key = meta.slug || meta.id;
+  if (state.postCache.has(key)) return state.postCache.get(key);
+  if (state.legacy) return null;
+  const post = await fetchJSON(meta.path, true);
+  state.postCache.set(key, post);
+  return post;
+}
+
+function findMeta(slug) {
+  return state.index.find((p) => (p.slug || p.id) === slug) || null;
 }
 
 /* ------------------------------------------------------------ 路由 */
@@ -110,15 +136,11 @@ function go(hash, { replace = false } = {}) {
 /* ------------------------------------------------------------ 渲染 */
 
 function viewHTML() {
-  const { site, posts, route } = state;
+  const { site, index, route } = state;
+  const posts = index;
   switch (route.name) {
     case "home":
       return homeHTML({ site, posts, page: route.page });
-    case "post": {
-      const post = posts.find((p) => (p.slug || p.id) === route.slug);
-      if (!post || post.draft) return missingHTML({ what: "文章" });
-      return postHTML({ site, posts, post });
-    }
     case "archive":
       return archiveHTML({ site, posts });
     case "tags":
@@ -138,10 +160,42 @@ function viewHTML() {
   }
 }
 
-function render({ scroll = true } = {}) {
+function loadingHTML(text = "正在加载文章…") {
+  return `<div class="boot"><span class="boot-dot"></span><p>${escapeHtml(text)}</p></div>`;
+}
+
+async function render({ scroll = true } = {}) {
   if (state.adminMounted) return;
   const { site, route } = state;
-  APP.innerHTML = viewHTML();
+
+  let post = null;
+  if (route.name === "post") {
+    const meta = findMeta(route.slug);
+    if (!meta || meta.draft) {
+      APP.innerHTML = missingHTML({ what: "文章" });
+      setActiveNav(route);
+      return;
+    }
+    post = state.postCache.get(meta.slug || meta.id) || null;
+    if (!post) {
+      APP.innerHTML = loadingHTML();
+      try {
+        post = await loadPost(meta);
+      } catch (err) {
+        console.error(err);
+        APP.innerHTML = missingHTML({ what: "文章" });
+        toast("文章加载失败，检查一下网络", "err");
+        return;
+      }
+    }
+    if (!post) {
+      APP.innerHTML = missingHTML({ what: "文章" });
+      return;
+    }
+    APP.innerHTML = postHTML({ site, posts: state.index, post });
+  } else {
+    APP.innerHTML = viewHTML();
+  }
 
   setActiveNav(route);
   document.body.classList.remove("is-locked");
@@ -150,11 +204,10 @@ function render({ scroll = true } = {}) {
 
   const s = site.site || {};
   const baseTitle = s.title || "我的小站";
-  if (route.name === "post") {
-    const post = state.posts.find((p) => (p.slug || p.id) === route.slug);
-    document.title = post ? `${post.title} · ${baseTitle}` : `找不到文章 · ${baseTitle}`;
+  if (route.name === "post" && post) {
+    document.title = `${post.title} · ${baseTitle}`;
     const desc = document.querySelector('meta[name="description"]');
-    if (desc && post) desc.setAttribute("content", post.excerpt || String(post.body || "").slice(0, 120));
+    if (desc) desc.setAttribute("content", post.excerpt || String(post.body || "").slice(0, 120));
   } else if (route.name === "home") {
     document.title = baseTitle;
   } else if (route.name === "game") {
@@ -343,14 +396,14 @@ const search = {
   results: [],
 
   build() {
-    this.index = published(state.posts).map((p) => ({
+    // 索引里没有正文，搜索覆盖标题、标签和摘要
+    this.index = published(state.index).map((p) => ({
       slug: p.slug || p.id,
       title: p.title || "",
       tags: (p.tags || []).join(" "),
-      body: String(p.body || ""),
       cover: p.cover || "",
       date: p.date || "",
-      haystack: `${p.title || ""} ${(p.tags || []).join(" ")} ${p.excerpt || ""} ${String(p.body || "")}`.toLowerCase(),
+      haystack: `${p.title || ""} ${(p.tags || []).join(" ")} ${p.excerpt || ""}`.toLowerCase(),
     }));
   },
 
@@ -382,7 +435,7 @@ const search = {
     const terms = kw.split(/\s+/).filter(Boolean);
 
     if (!terms.length) {
-      this.results = orderedPosts(state.posts).slice(0, 6).map((p) => ({
+      this.results = orderedPosts(state.index).slice(0, 6).map((p) => ({
         slug: p.slug || p.id,
         title: p.title,
         tags: (p.tags || []).join(" · "),
@@ -734,7 +787,7 @@ async function enterAdmin() {
     state.admin = mod;
     const ctx = {
       sitePayload: state.siteRaw,
-      postsPayload: state.postsRaw,
+      indexPayload: { posts: state.index },
       reload: async () => {
         await loadContent({ bust: true });
         // 面板打开时不要用「已部署的旧配置」覆盖面板里的草稿主题
@@ -747,11 +800,12 @@ async function enterAdmin() {
         document.body.classList.remove("admin-on");
         state.adminMounted = false;
         APP.removeAttribute("style");
+        state.postCache.clear();
         await loadContent({ bust: true });
         applyTheme(state.site.theme);
         applyChrome(state.site, { mode: document.documentElement.dataset.mode });
         state.route = parseRoute();
-        render();
+        await render();
       },
     };
     document.body.classList.add("admin-on");
@@ -783,7 +837,7 @@ async function router() {
   }
   if (wasAdmin) leaveAdmin();
 
-  render();
+  await render();
 }
 
 async function boot() {

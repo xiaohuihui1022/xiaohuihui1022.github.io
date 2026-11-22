@@ -38,7 +38,47 @@ const MIME = {
   ".txt": "text/plain; charset=utf-8",
 };
 
-const CONTENT_FILES = new Set(["content/site.json", "content/posts.json"]);
+const CONTENT_ROOT = "content";
+const INDEX_FILE = "content/posts/index.json";
+
+function isContentPath(rel) {
+  return rel === "content/site.json" || /^content\/posts\/[^\\]+(\/[^\\]+)*\.json$/.test(rel) || rel === INDEX_FILE;
+}
+
+function walkPosts() {
+  const dir = path.join(root, "content", "posts");
+  const out = [];
+  const walk = (d) => {
+    if (!fs.existsSync(d)) return;
+    for (const entry of fs.readdirSync(d, { withFileTypes: true })) {
+      const abs = path.join(d, entry.name);
+      if (entry.isDirectory()) walk(abs);
+      else if (entry.name.endsWith(".json") && entry.name !== "index.json") out.push(abs);
+    }
+  };
+  walk(dir);
+  return out;
+}
+
+/* 索引优先读 index.json；没有就按文件现算一份 */
+function readIndex() {
+  const idxPath = path.join(root, INDEX_FILE);
+  if (fs.existsSync(idxPath)) {
+    try {
+      const j = JSON.parse(fs.readFileSync(idxPath, "utf8"));
+      if (Array.isArray(j.posts)) return j.posts;
+    } catch {}
+  }
+  return walkPosts().map((abs) => {
+    const rel = path.relative(root, abs).replace(/\\/g, "/");
+    try {
+      const p = JSON.parse(fs.readFileSync(abs, "utf8"));
+      return { ...p, path: rel };
+    } catch {
+      return null;
+    }
+  }).filter(Boolean);
+}
 
 /* ---------------------------------------------------------------- 工具 */
 
@@ -98,12 +138,29 @@ function readJSON(file) {
 }
 
 function writeFileSafe(relPath, text) {
-  const abs = path.resolve(root, relPath);
-  if (!abs.startsWith(root + path.sep)) throw new Error("路径越界");
-  if (!CONTENT_FILES.has(relPath)) throw new Error("只允许写入 content/site.json 和 content/posts.json");
+  const clean = String(relPath || "").replace(/\\/g, "/");
+  if (!isContentPath(clean)) throw new Error("只允许写入 content/site.json 和 content/posts/ 下的文件");
+  const abs = path.resolve(root, clean);
+  if (!abs.startsWith(path.join(root, CONTENT_ROOT) + path.sep)) throw new Error("路径越界");
   fs.mkdirSync(path.dirname(abs), { recursive: true });
   fs.writeFileSync(abs, text, "utf8");
-  return relPath;
+  return clean;
+}
+
+function deleteFileSafe(relPath) {
+  const clean = String(relPath || "").replace(/\\/g, "/");
+  if (!isContentPath(clean) || clean === INDEX_FILE) throw new Error("这个路径不允许删除");
+  const abs = path.resolve(root, clean);
+  if (!abs.startsWith(path.join(root, CONTENT_ROOT) + path.sep)) throw new Error("路径越界");
+  if (fs.existsSync(abs)) fs.unlinkSync(abs);
+  return clean;
+}
+
+function readFileSafe(relPath) {
+  const clean = String(relPath || "").replace(/\\/g, "/");
+  if (!isContentPath(clean)) throw new Error("只允许读取 content 下的文件");
+  const abs = path.resolve(root, clean);
+  return fs.readFileSync(abs, "utf8");
 }
 
 function writeImage(relPath, base64) {
@@ -129,18 +186,31 @@ async function api(req, res, pathname) {
     try {
       return sendJSON(res, 200, {
         site: readJSON("content/site.json"),
-        posts: readJSON("content/posts.json"),
+        posts: readIndex(),
       });
     } catch (e) {
       return sendJSON(res, 500, { error: e.message });
     }
   }
 
-  if (pathname === "/api/file" && req.method === "POST") {
+  if (pathname === "/api/read" && req.method === "POST") {
     try {
       const body = await readBody(req);
-      writeFileSafe(body.path, body.text);
-      return sendJSON(res, 200, { ok: true, path: body.path });
+      return sendJSON(res, 200, { text: readFileSafe(body.path) });
+    } catch (e) {
+      return sendJSON(res, 400, { error: e.message });
+    }
+  }
+
+  if (pathname === "/api/files" && req.method === "POST") {
+    try {
+      const body = await readBody(req);
+      const files = Array.isArray(body.files) ? body.files : [];
+      for (const f of files) {
+        if (f.delete) deleteFileSafe(f.path);
+        else writeFileSafe(f.path, f.text);
+      }
+      return sendJSON(res, 200, { ok: true, files: files.length });
     } catch (e) {
       return sendJSON(res, 400, { error: e.message });
     }

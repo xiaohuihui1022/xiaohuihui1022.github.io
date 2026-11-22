@@ -77,7 +77,7 @@ git push -u origin main
 
 改完点右上角 **「保存并发布」**（或 `Ctrl/⌘ + S`），它会：
 
-1. 把你改动的文件提交到仓库（`content/site.json` 和/或 `content/posts.json`）
+1. 把你改动的文件提交到仓库（`content/site.json`、`content/posts/index.json` 和这篇文章自己的文件）
 2. GitHub Pages 自动重新部署，**通常 30–60 秒后访客就能看到**
 3. 面板里的预览是即时的，不用等部署
 
@@ -181,6 +181,37 @@ Markdown 本身没有字色，这里加了一个轻量标记：`{颜色|文字}`
 
 ---
 
+## 文章是怎么存的
+
+一篇文章一个文件，列表只读索引：
+
+```
+content/posts/index.json                 索引：标题、日期、标签、摘要、路径（没有正文）
+content/posts/随笔/day1.json               正文 + 元信息
+content/posts/_uncategorized/xxx.json     没有标签的文章
+```
+
+- 首页 / 归档 / 标签 / 搜索都只读 `index.json`，文章再多也不会拖慢首页
+- 打开某篇文章时才去取它自己的那个文件
+- 文件夹按**第一个标签**分类；改标签后保存会自动把文件挪到新目录（同一个提交里删旧建新）
+- 没有标签的放进 `_uncategorized/`
+
+### 从旧的单文件迁移
+
+以前是 `content/posts.json` 一个文件装全部文章。本站已经迁移过了；换仓库时可以跑：
+
+```bash
+node scripts/migrate-posts.mjs
+```
+
+它会拆成一篇一个文件、生成索引，再删掉旧的 `posts.json`（历史仍在 git 里）。
+
+### 手写一篇
+
+新建 `content/posts/<标签>/<slug>.json`，结构就是「索引里那些字段 + body」，然后在 `index.json` 的 `posts` 里补一条。嫌麻烦就用控制台新建，它会同时写好文件和索引。
+
+---
+
 ## 安全是怎么设计的
 
 这套东西跑在纯静态托管上，所以安全模型跟有后端的博客不一样，值得花一分钟了解：
@@ -253,7 +284,11 @@ node scripts/test-console.mjs  # 本地版：在临时目录里跑真实的 git 
 ├─ 404.html              找不到页面时的提示
 ├─ content/
 │  ├─ site.json          站点配置 + 主题 + 音乐 + 密码哈希 + 仓库信息
-│  └─ posts.json         全部文章
+│  └─ posts/
+│     ├─ index.json      索引：每篇的标题/日期/标签/摘要/路径，列表和搜索只读它
+│     └─ 随笔/           按「第一个标签」分类，没有标签的在 _uncategorized/
+│        ├─ day1.json
+│        └─ ciallo.json
 ├─ assets/
 │  ├─ css/style.css      前台样式（设计令牌都在 :root）
 │  ├─ css/admin.css      控制台样式
@@ -275,7 +310,7 @@ node scripts/test-console.mjs  # 本地版：在临时目录里跑真实的 git 
 └─ .nojekyll             告诉 GitHub Pages 不要跑 Jekyll
 ```
 
-想手改也可以：`content/*.json` 就是全部内容，格式很直白。改完直接 commit 一样生效。
+想手改也可以：`content/site.json` 是站点配置，`content/posts/` 下是一篇一个的 JSON，格式都很直白。改完直接 commit 一样生效（新增/删除文章记得同步 `index.json`）。
 
 ---
 
@@ -297,7 +332,7 @@ GitHub Pages 一般 30–60 秒。没生效就等一会儿，或者强制刷新�
 可以。仓库 Settings → Pages → Custom domain 填域名，然后在域名服务商加一条 CNAME 指向 `xiaohuihui1022.github.io`。这个站所有路径都是相对的，换域名不用改代码。
 
 **文章存在哪？会不会丢？**
-存在 `content/posts.json`，跟着 Git 走。每次保存都是一次提交，历史版本永远能翻回来。
+存在 `content/posts/` 下，一篇一个文件，跟着 Git 走。每次保存只提交改动的那几个文件，历史版本永远能翻回来。
 
 **能多人一起写吗？**
 可以，但需要共享同一个管理员密码（内容都是公开的，谁都能看）。不建议把密码给不熟的人——他们能改你整个站。

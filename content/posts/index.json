@@ -1,0 +1,41 @@
+{
+  "version": 2,
+  "updatedAt": "2026-11-22T09:09:38.605Z",
+  "posts": [
+    {
+      "id": "p_mwrku2vq9rl2n5",
+      "slug": "day1",
+      "title": "看完RE:0，我的一些感受",
+      "date": "2026-11-22",
+      "tags": [
+        "随笔",
+        "番剧"
+      ],
+      "cover": "assets/uploads/day1-mwrlck3q.webp",
+      "excerpt": "看完RE:0，我的一些感受 昨天刚刚看完re0第四季，想写点关于这部番的感受 会涉及严重的剧透，如果您还没有看到re0第四季的话请回避。 引言 大概是今年11月初，我才开始看re0。大概在10年前我就耳闻过这部番，不过当…",
+      "pinned": false,
+      "draft": false,
+      "path": "content/posts/随笔/day1.json",
+      "readingTime": 4,
+      "words": 1979,
+      "updatedAt": ""
+    },
+    {
+      "id": "p_mwqd9dc0nhnl0d",
+      "slug": "ciallo",
+      "title": "Ciallo～(∠・ω< )⌒★",
+      "date": "2026-11-21",
+      "tags": [
+        "随笔"
+      ],
+      "cover": "assets/uploads/ciallo-mwqde2bl.webp",
+      "excerpt": "The beginning",
+      "pinned": true,
+      "draft": false,
+      "path": "content/posts/随笔/ciallo.json",
+      "readingTime": 1,
+      "words": 348,
+      "updatedAt": ""
+    }
+  ]
+}

@@ -127,7 +127,11 @@ try {
   await page.click('[data-act="save"]');
   await page.waitForTimeout(1200);
   const afterSave = git(["status", "--porcelain"]);
-  step("保存后文件写入磁盘", afterSave.includes("content/site.json") && afterSave.includes("content/posts.json"));
+  step(
+    "保存后文件写入磁盘",
+    afterSave.includes("content/site.json") && /content\/posts\//.test(afterSave),
+    afterSave.split("\n").length + " 个改动"
+  );
 
   const commitsBefore = Number(git(["rev-list", "--count", "HEAD"]));
   await page.click('[data-act="commit"]');
@@ -143,9 +147,15 @@ try {
   step("提交后工作区干净", git(["status", "--porcelain"]) === "");
 
   const savedSite = JSON.parse(fs.readFileSync(path.join(tmp, "content/site.json"), "utf8"));
-  const savedPosts = JSON.parse(fs.readFileSync(path.join(tmp, "content/posts.json"), "utf8"));
+  const savedIndex = JSON.parse(fs.readFileSync(path.join(tmp, "content/posts/index.json"), "utf8"));
+  const created = (savedIndex.posts || []).find((p) => p.title === "本地控制台写的文章");
   step("主题改动落盘", savedSite.theme.preset === "mint", `preset=${savedSite.theme.preset}`);
-  step("文章落盘", savedPosts.posts.some((p) => p.title === "本地控制台写的文章"));
+  step(
+    "文章落盘（独立文件 + 索引）",
+    Boolean(created) && fs.existsSync(path.join(tmp, created.path)),
+    created?.path || "没找到"
+  );
+  step("文章按标签分目录", Boolean(created) && /content\/posts\/[^/]+\/.+\.json$/.test(created.path), created?.path || "");
 
   await page.screenshot({ path: path.join(src, ".shots", "40-local-console.png"), fullPage: false });
   step("没有 JavaScript 报错", errors.length === 0, errors.join(" | "));

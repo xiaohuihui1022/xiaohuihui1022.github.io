@@ -1,0 +1,17 @@
+{
+  "version": 2,
+  "id": "p_mwqd9dc0nhnl0d",
+  "slug": "ciallo",
+  "title": "Ciallo～(∠・ω< )⌒★",
+  "date": "2026-11-21",
+  "tags": [
+    "随笔"
+  ],
+  "cover": "assets/uploads/ciallo-mwqde2bl.webp",
+  "excerpt": "The beginning",
+  "pinned": true,
+  "draft": false,
+  "body": "# Ciallo～(∠・ω< )⌒★\n\n## 引言\n\n欢迎来到灰灰小站，这里会存放一些我个人的杂谈，碎碎念以及日常\n\n其实主要是想写文章的时候没有地方发布，所以才顺手让AI搭建了一个这种博客类型的网站\n\n本网站完全依赖于Github Pages，详细信息可以看`关于`里面的介绍\n\n## 1.这个网站我能看到什么东西呢？\n\n你可以看到我在平时随手写的一些小随笔，不算正式的文章，就是纯写着玩。\n\n你可以看到我最近在听的歌。\n\n你可以通过这个网站了解我的一些日常。\n\n你还可以看到我的一些想法，甚至是一些新的项目的开发历程。\n\n就当我是拿这个网站来练手吧。\n\n## 2.我也可以开一个这样的网站吗\n\n完全可以，使用github pages进行部署是完全免费的，你可以交给你的agent去做\n\n## 3.这个网站的未来?\n\n不确定欸，随时有可能停更，我平时想起来就会更新的\n\n",
+  "slugTouched": true,
+  "updatedAt": "2026-11-22T09:09:38.604Z"
+}

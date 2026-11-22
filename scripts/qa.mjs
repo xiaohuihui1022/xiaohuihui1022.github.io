@@ -8,6 +8,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { chromium } from "playwright-core";
+import { INDEX_FILE, postPath, toMeta } from "../assets/js/posts.js";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const BASE = process.env.BASE || "http://127.0.0.1:5173/";
@@ -89,14 +90,24 @@ siteFixture.admin = { repo: { owner: "tester", name: "my-blog", branch: "main" }
 // 音乐相关断言需要从「空的」开始，不受站点实际配置影响
 siteFixture.music = { enabled: false, title: "最近在听", desc: "", playlistId: "", songs: [] };
 
-const repo = {
-  "content/site.json": JSON.stringify(siteFixture),
-  "content/posts.json": JSON.stringify(FIXTURE_POSTS),
-};
-const shas = { "content/posts.json": "sha-posts-1" };
+/* 按新结构铺一份仓库：每篇一个文件 + index.json */
+const repo = { "content/site.json": JSON.stringify(siteFixture, null, 2) + "\n" };
+const indexMetas = [];
+for (const post of FIXTURE_POSTS.posts) {
+  const meta = toMeta(post);
+  const rel = postPath(post);
+  repo[rel] = JSON.stringify({ version: 2, ...post, slug: meta.slug }, null, 2) + "\n";
+  indexMetas.push({ ...meta, path: rel });
+}
+repo[INDEX_FILE] = JSON.stringify({ version: 2, updatedAt: "2026-01-01T00:00:00.000Z", posts: indexMetas }, null, 2) + "\n";
+
+const shas = {};
 let shaSeq = 0;
+let blobSeq = 0;
+let treeSeq = 0;
 let denyToken = false;
 let fail409Once = false;
+const blobs = new Map();
 const commits = [];
 
 const errors = [];
@@ -179,9 +190,12 @@ async function main() {
   };
 
   /* 模拟「GitHub Pages 已经重新部署」：站点静态 JSON 跟着仓库内容走 */
-  await page.route(/\/content\/(site|posts)\.json(\?.*)?$/, async (route) => {
-    const key = route.request().url().includes("posts.json") ? "content/posts.json" : "content/site.json";
-    return route.fulfill({ status: 200, contentType: "application/json", body: repo[key] });
+  await page.route(/\/content\/(site\.json|posts\/.*\.json)(\?.*)?$/, async (route) => {
+    const url = new URL(route.request().url());
+    const key = decodeURIComponent(url.pathname.replace(/^\//, ""));
+    const body = repo[key];
+    if (body == null) return route.fulfill({ status: 404, contentType: "application/json", body: "{}" });
+    return route.fulfill({ status: 200, contentType: "application/json", body });
   });
 
   /* 网易云播放器在测试里不需要真的加载 */
@@ -218,6 +232,36 @@ async function main() {
       });
     }
     if (p.endsWith("/branches")) return json(200, [{ name: "main" }]);
+
+    /* Git Data API：一次提交多个文件（新的保存方式走这里） */
+    if (/\/git\/ref\/heads\//.test(p) && method === "GET") {
+      return json(200, { object: { sha: "head-1" } });
+    }
+    if (/\/git\/commits\/[^/]+$/.test(p) && method === "GET") {
+      return json(200, { sha: "head-1", tree: { sha: "base-tree" } });
+    }
+    if (p.endsWith("/git/blobs") && method === "POST") {
+      const body = JSON.parse(req.postData() || "{}");
+      const sha = `blob-${++blobSeq}`;
+      blobs.set(sha, Buffer.from(body.content || "", "base64").toString("utf8"));
+      return json(201, { sha });
+    }
+    if (p.endsWith("/git/trees") && method === "POST") {
+      const body = JSON.parse(req.postData() || "{}");
+      for (const entry of body.tree || []) {
+        if (entry.sha === null) delete repo[entry.path];
+        else repo[entry.path] = blobs.get(entry.sha) ?? "";
+      }
+      return json(201, { sha: `tree-${++treeSeq}` });
+    }
+    if (p.endsWith("/git/commits") && method === "POST") {
+      const body = JSON.parse(req.postData() || "{}");
+      commits.push({ message: body.message });
+      return json(201, { sha: `commit-${commits.length}` });
+    }
+    if (/\/git\/refs\/heads\//.test(p) && method === "PATCH") {
+      return json(200, { object: { sha: "head-2" } });
+    }
 
     const m = p.match(/^\/repos\/[^/]+\/[^/]+\/contents\/(.+)$/);
     if (m) {
@@ -423,11 +467,20 @@ async function main() {
   fail409Once = true;
   await page.click('[data-act="save-post"]');
   await page.waitForTimeout(2200);
-  const savedPosts = JSON.parse(repo["content/posts.json"] || "{}");
-  const created = (savedPosts.posts || []).find((p) => p.title === "测试文章：来自自动化检查");
-  step("保存后文章写入 posts.json", Boolean(created), `${commits.length} 次提交`);
+  const savedIndex = JSON.parse(repo[INDEX_FILE] || "{}");
+  const created = (savedIndex.posts || []).find((p) => p.title === "测试文章：来自自动化检查");
+  step(
+    "保存后文章写入独立文件并进入索引",
+    Boolean(created) && Boolean(repo[created.path]),
+    created?.path || "没找到"
+  );
   step("遇到 409 会自动重试成功", Boolean(created));
   step("提交信息可读", commits.some((c) => c.message.includes("测试文章")));
+  step(
+    "一次保存只产生一个提交",
+    commits.filter((c) => (c.message || "").includes("测试文章")).length === 1,
+    `${commits.length} 次提交`
+  );
 
   /* ---------------------------------------------------------- 安全 */
   await page.click('[data-tab="security"]');
@@ -577,9 +630,12 @@ async function main() {
   mp.on("pageerror", (err) => errors.push(`mobile pageerror: ${err.message}`));
 
   // 手机端也要用同一份测试内容，否则空站点没有卡片可测
-  await mp.route(/\/content\/(site|posts)\.json(\?.*)?$/, (route) => {
-    const key = route.request().url().includes("posts.json") ? "content/posts.json" : "content/site.json";
-    return route.fulfill({ status: 200, contentType: "application/json", body: repo[key] });
+  await mp.route(/\/content\/(site\.json|posts\/.*\.json)(\?.*)?$/, (route) => {
+    const url = new URL(route.request().url());
+    const key = decodeURIComponent(url.pathname.replace(/^\//, ""));
+    const body = repo[key];
+    if (body == null) return route.fulfill({ status: 404, contentType: "application/json", body: "{}" });
+    return route.fulfill({ status: 200, contentType: "application/json", body });
   });
   await mp.route(/music\.163\.com/, (route) =>
     route.fulfill({ status: 200, contentType: "text/html", body: "<!doctype html><title>stub</title>" })

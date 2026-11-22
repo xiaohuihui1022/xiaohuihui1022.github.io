@@ -25,7 +25,8 @@ async function call(path, body) {
 
 const backend = {
   load: () => call("/state"),
-  writeFile: (path, text) => call("/file", { path, text }),
+  readFile: async (path) => (await call("/read", { path })).text,
+  saveFiles: (files) => call("/files", { files }),
   putImage: (path, base64) => call("/image", { path, base64 }),
   git: () => call("/git"),
   commit: (message, push) => call("/commit", { message, push }),

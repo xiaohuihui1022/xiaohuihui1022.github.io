@@ -67,6 +67,7 @@ function coverImg(src, alt, cls = "") {
 
 export function cardHTML(post) {
   const excerpt = post.excerpt ? String(post.excerpt) : truncate(post.body, 96);
+  const minutes = post.readingTime || readingTime(post.body || "");
   return `
   <article class="card">
     ${
@@ -78,7 +79,7 @@ export function cardHTML(post) {
       <div class="card-meta">
         <span>${fmtDot(post.date)}</span>
         <i class="sep"></i>
-        <span>${readingTime(post.body || "")} 分钟</span>
+        <span>${minutes} 分钟</span>
         ${post.pinned ? `<i class="sep"></i><span class="pin">${icon("star")}置顶</span>` : ""}
       </div>
       <h3 class="card-title"><a class="card-link" href="${postUrl(post)}">${escapeHtml(post.title || "无标题")}</a></h3>
@@ -90,6 +91,7 @@ export function cardHTML(post) {
 
 export function featuredHTML(post) {
   const excerpt = post.excerpt ? String(post.excerpt) : truncate(post.body, 150);
+  const minutes = post.readingTime || readingTime(post.body || "");
   return `
   <article class="featured">
     <div class="featured-body">
@@ -101,7 +103,7 @@ export function featuredHTML(post) {
       </h2>
       ${excerpt ? `<p class="card-excerpt" style="-webkit-line-clamp:3;font-size:14.5px;line-height:1.9">${escapeHtml(excerpt)}</p>` : ""}
       <div class="card-meta" style="margin-top:6px">
-        <span>${fmtDot(post.date)}</span><i class="sep"></i><span>${readingTime(post.body || "")} 分钟</span>
+        <span>${fmtDot(post.date)}</span><i class="sep"></i><span>${minutes} 分钟</span>
       </div>
       <div class="chips" style="margin-top:14px">${(post.tags || [])
         .slice(0, 4)

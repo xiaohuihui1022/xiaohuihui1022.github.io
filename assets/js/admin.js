@@ -26,10 +26,10 @@ import { GitHub, GitHubError, bytesToB64 } from "./github.js";
 import { renderMarkdown } from "./markdown.js";
 import { applyTheme, PRESETS, FONTS, MODES, themeVars, presetOf } from "./theme.js";
 import { previewCardsHTML, musicSongs, musicCardHTML, hydrateMusic } from "./views.js";
+import { INDEX_FILE, POSTS_DIR, postPath, toMeta, metasFromLegacy } from "./posts.js";
 
 const TOKEN_KEY = "blog.gh.token";
 const REPO_FILE = "content/site.json";
-const POSTS_FILE = "content/posts.json";
 
 const S = {
   root: null,
@@ -37,9 +37,14 @@ const S = {
   mode: "github",
   backend: null,
   site: null,
-  posts: null,
+  posts: [],        // 索引：每篇只有元信息
   baseSite: "",
   basePosts: "",
+  editing: null,    // 正在编辑的完整文章
+  loadingEditor: false,
+  editingBase: "",
+  editingPath: "",  // 打开时它在仓库里的路径（新建为空）
+  deleted: [],      // 保存时要删掉的文件
   sha: {},
   gh: null,
   tab: "content",
@@ -54,6 +59,29 @@ const S = {
 /* ================================================================ 工具 */
 
 const clone = (v) => JSON.parse(JSON.stringify(v));
+
+/* 索引统一成「元信息数组」 */
+function normalizeIndex(raw) {
+  if (Array.isArray(raw)) return clone(raw);
+  const list = raw && Array.isArray(raw.posts) ? raw.posts : [];
+  return clone(list);
+}
+
+/* 读写后端：web 走 GitHub，local 走本地服务 */
+async function readRemote(path) {
+  if (S.mode === "local") return S.backend.readFile(path);
+  const file = await S.gh.getFile(path);
+  return file.text;
+}
+
+async function saveRemote(files, message) {
+  if (!files.length) return { files: 0 };
+  if (S.mode === "local") {
+    await S.backend.saveFiles(files);
+    return { files: files.length };
+  }
+  return S.gh.commitFiles(files, message);
+}
 
 function getPath(obj, path) {
   return path.split(".").reduce((acc, key) => (acc == null ? undefined : acc[key]), obj);
@@ -83,15 +111,22 @@ function siteDirty() {
   return JSON.stringify(S.site) !== S.baseSite;
 }
 function postsDirty() {
-  return JSON.stringify(S.posts) !== S.basePosts;
+  return JSON.stringify(S.posts) !== S.basePosts || S.deleted.length > 0;
+}
+function editingDirty() {
+  return Boolean(S.editing) && JSON.stringify(S.editing) !== S.editingBase;
 }
 function isDirty() {
-  return siteDirty() || postsDirty();
+  return siteDirty() || postsDirty() || editingDirty();
 }
 
 function updateDirtyBadge() {
   const el = $(".dirty");
   if (el) el.classList.toggle("is-on", isDirty());
+}
+
+function loadingBlock(text = "正在加载…") {
+  return `<div class="boot" style="padding:120px 0"><span class="boot-dot"></span><p>${escapeHtml(text)}</p></div>`;
 }
 
 function loadCSS() {
@@ -132,10 +167,13 @@ export async function mount(root, ctx) {
   loadCSS();
 
   S.site = clone(ctx.sitePayload || {});
-  S.posts = clone(ctx.postsPayload || { posts: [] });
-  if (!Array.isArray(S.posts.posts)) S.posts.posts = [];
+  S.posts = normalizeIndex(ctx.indexPayload);
   S.baseSite = JSON.stringify(S.site);
   S.basePosts = JSON.stringify(S.posts);
+  S.editing = null;
+  S.editingBase = "";
+  S.editingPath = "";
+  S.deleted = [];
 
   bindGlobalEvents();
 
@@ -342,7 +380,10 @@ function renderSetup() {
         if (!(e instanceof GitHubError) || e.status !== 404) throw e;
       }
 
-      await putFileWithRetry(gh, REPO_FILE, JSON.stringify(S.site, null, 2) + "\n", "初始化控制台与管理员密码");
+      await gh.commitFiles(
+        [{ path: REPO_FILE, text: JSON.stringify(S.site, null, 2) + "\n" }],
+        "初始化控制台与管理员密码"
+      );
       S.sha[REPO_FILE] = "";
 
       store.set(TOKEN_KEY, token);
@@ -512,9 +553,12 @@ async function startLocal() {
   try {
     const data = await S.backend.load();
     S.site = data.site || {};
-    S.posts = data.posts && Array.isArray(data.posts.posts) ? data.posts : { version: 1, posts: [] };
+    S.posts = normalizeIndex(data.posts);
     S.baseSite = JSON.stringify(S.site);
     S.basePosts = JSON.stringify(S.posts);
+    S.editing = null;
+    S.editingPath = "";
+    S.deleted = [];
   } catch (e) {
     toast(`读取本地文件失败：${e.message}`, "err");
     return;
@@ -534,21 +578,23 @@ async function startApp() {
 
   // 以仓库当前内容为基线，避免覆盖别处的修改
   try {
-    const [siteFile, postsFile] = await Promise.all([
+    const [siteFile, indexFile] = await Promise.all([
       S.gh.getFile(REPO_FILE).catch((e) => (e.status === 404 ? null : Promise.reject(e))),
-      S.gh.getFile(POSTS_FILE).catch((e) => (e.status === 404 ? null : Promise.reject(e))),
+      S.gh.getFile(INDEX_FILE).catch((e) => (e.status === 404 ? null : Promise.reject(e))),
     ]);
-    if (siteFile) {
-      S.site = JSON.parse(siteFile.text);
-      S.sha[REPO_FILE] = siteFile.sha;
-    }
-    if (postsFile) {
-      const parsed = JSON.parse(postsFile.text);
-      S.posts = { version: 1, ...parsed, posts: Array.isArray(parsed.posts) ? parsed.posts : [] };
-      S.sha[POSTS_FILE] = postsFile.sha;
+    if (siteFile) S.site = JSON.parse(siteFile.text);
+    if (indexFile) {
+      S.posts = normalizeIndex(JSON.parse(indexFile.text));
+    } else {
+      // 还没迁移过的旧仓库：从单个 posts.json 兜底
+      const legacy = await S.gh.getFile("content/posts.json").catch(() => null);
+      if (legacy) S.posts = metasFromLegacy(JSON.parse(legacy.text).posts || []);
     }
     S.baseSite = JSON.stringify(S.site);
     S.basePosts = JSON.stringify(S.posts);
+    S.editing = null;
+    S.editingPath = "";
+    S.deleted = [];
   } catch (e) {
     if (e instanceof GitHubError) {
       toast(`读取仓库失败：${e.message}`, "err");
@@ -574,7 +620,7 @@ const TABS = [
 function renderShell() {
   const s = S.site?.site || {};
   const cfg = repoConfig();
-  const count = S.posts.posts.length;
+  const count = S.posts.length;
   const isLocal = S.mode === "local";
 
   S.root.innerHTML = `
@@ -655,6 +701,11 @@ function setTab(tab) {
 function revertDrafts() {
   S.site = JSON.parse(S.baseSite);
   S.posts = JSON.parse(S.basePosts);
+  S.deleted = [];
+  S.editing = null;
+  S.editingBase = "";
+  S.editingPath = "";
+  S.editingId = null;
   applyDraftTheme();
 }
 
@@ -674,13 +725,15 @@ function renderTab() {
   const sub = $("#adm-sub");
   if (sub) sub.textContent = subs[S.tab] || "";
 
-  if (S.tab === "content") body.innerHTML = S.editingId ? editorHTML() : listHTML();
-  else if (S.tab === "appearance") body.innerHTML = appearanceHTML();
+  if (S.tab === "content") {
+    if (S.loadingEditor) body.innerHTML = loadingBlock("正在读取文章…");
+    else body.innerHTML = S.editingId ? editorHTML() : listHTML();
+  } else if (S.tab === "appearance") body.innerHTML = appearanceHTML();
   else if (S.tab === "site") body.innerHTML = siteHTML();
   else if (S.tab === "music") body.innerHTML = musicHTML();
   else body.innerHTML = securityHTML();
 
-  if (S.tab === "content" && S.editingId) wireEditor();
+  if (S.tab === "content" && S.editingId && !S.loadingEditor) wireEditor();
   if (S.tab === "appearance") wireAppearance();
   if (S.tab === "site") wireSite();
   if (S.tab === "music") wireMusic();
@@ -699,7 +752,7 @@ function sortedPosts(list) {
 }
 
 function listHTML() {
-  const list = sortedPosts(S.posts.posts);
+  const list = sortedPosts(S.posts);
   const q = S.listQuery.trim().toLowerCase();
   const filtered = q
     ? list.filter((p) => `${p.title} ${(p.tags || []).join(" ")}`.toLowerCase().includes(q))
@@ -746,7 +799,7 @@ function rowHTML(p) {
       <div class="m">
         <span class="p-date">${fmtDot(p.date)}</span>
         ${tags ? `<span class="p-tags">${tags}</span>` : ""}
-        <span class="p-time">${readingTime(p.body || "")} 分钟</span>
+        <span class="p-time">${p.readingTime || 1} 分钟</span>
       </div>
     </div>
     <div class="acts">
@@ -760,12 +813,36 @@ function rowHTML(p) {
 /* ================================================================ 编辑器 */
 
 function currentPost() {
-  return S.posts.posts.find((p) => p.id === S.editingId) || null;
+  return S.editing;
+}
+
+/* 打开一篇：索引里只有元信息，正文要单独取回来 */
+async function openEditor(id) {
+  const meta = S.posts.find((p) => p.id === id);
+  if (!meta) return;
+  S.loadingEditor = true;
+  S.editingId = id;
+  renderTab();
+  try {
+    const text = await readRemote(meta.path);
+    const post = JSON.parse(text);
+    S.editing = { ...post, id: post.id || id, path: meta.path };
+    S.editingBase = JSON.stringify(S.editing);
+    S.editingPath = meta.path;
+  } catch (e) {
+    console.error(e);
+    toast(`读取这篇文章失败：${e?.message || e}`, "err");
+    S.editingId = null;
+    S.editing = null;
+  } finally {
+    S.loadingEditor = false;
+    renderTab();
+  }
 }
 
 function editorHTML() {
   const p = currentPost();
-  if (!p) return listHTML();
+  if (!p) return loadingBlock("正在读取文章…");
   const wide = window.innerWidth > 1100;
   const pane = S.pane || (wide ? "split" : "edit");
   const words = String(p.body || "").replace(/\s/g, "").length;
@@ -1459,7 +1536,7 @@ function appearanceHTML() {
       <p class="panel-desc">下面是首页卡片的真实样式，改完立刻就能看到。</p>
       <div class="preview-frame" id="preview-frame">
         <div class="preview-note">${icon("info")}预览使用当前草稿主题，保存后才会对访客生效</div>
-        ${previewCardsHTML(S.posts.posts)}
+        ${previewCardsHTML(S.posts)}
       </div>
     </div>
   </div>`;
@@ -1471,7 +1548,7 @@ function wireAppearance() {
   const refreshPreview = debounce(() => {
     const frame = $("#preview-frame");
     if (frame) {
-      frame.innerHTML = `<div class="preview-note">${icon("info")}预览使用当前草稿主题，保存后才会对访客生效</div>${previewCardsHTML(S.posts.posts)}`;
+      frame.innerHTML = `<div class="preview-note">${icon("info")}预览使用当前草稿主题，保存后才会对访客生效</div>${previewCardsHTML(S.posts)}`;
     }
   }, 260);
 
@@ -1935,85 +2012,94 @@ function wireSecurity() {
 
 /* ================================================================ 保存 */
 
+function postFileText(post) {
+  const { path: _omit, ...rest } = post;
+  return JSON.stringify({ version: 2, ...rest, updatedAt: new Date().toISOString() }, null, 2) + "\n";
+}
+
+function indexFileText() {
+  return JSON.stringify({ version: 2, updatedAt: new Date().toISOString(), posts: S.posts }, null, 2) + "\n";
+}
+
+/* 把编辑器里的文章同步进索引（保存前调用） */
+function syncEditingMeta() {
+  const p = S.editing;
+  if (!p) return;
+  p.slug = slugify(p.slug || p.title || p.id, "post");
+  const meta = toMeta(p);
+  const i = S.posts.findIndex((m) => m.id === p.id);
+  if (i >= 0) S.posts[i] = meta;
+  else S.posts.unshift(meta);
+}
+
 function commitMessage() {
-  if (postsDirty() && S.editingId) {
-    const p = currentPost();
-    return `${p?.draft ? "保存草稿" : "更新文章"}：${p?.title || "无标题"}`;
+  const p = S.editing;
+  if (p && (editingDirty() || postPath(p) !== S.editingPath)) {
+    return `${S.editingPath ? (p.draft ? "保存草稿" : "更新文章") : "新建文章"}：${p.title || "无标题"}`;
   }
-  if (postsDirty()) return "更新文章";
+  if (postsDirty() || S.deleted.length) return "更新文章";
   if (siteDirty()) return "更新站点设置";
   return "更新内容";
 }
 
-/* 提交文件：写之前总是重新读一次 sha，遇到 409 再读一次重试。
-   GitHub API 的 GET 会被浏览器缓存（max-age=60），复用缓存里的旧 sha 会导致一直 409。 */
-async function putFileWithRetry(gh, path, text, message) {
-  const shaNow = async () => {
-    try {
-      return (await gh.getFile(path)).sha;
-    } catch (e) {
-      if (e instanceof GitHubError && e.status === 404) return "";
-      throw e;
-    }
-  };
-
-  try {
-    return await gh.putFile(path, text, message, await shaNow());
-  } catch (e) {
-    if (!(e instanceof GitHubError) || e.status !== 409) throw e;
-    // 等一下再取一次，避开 GitHub 写入后的短暂不一致
-    await new Promise((r) => setTimeout(r, 700));
-    return await gh.putFile(path, text, message, await shaNow());
-  }
-}
-
 async function saveAll() {
   if (S.busy) return;
-  const jobs = [];
+
+  syncEditingMeta();
+
+  const files = [];
   if (siteDirty()) {
     S.site.updatedAt = new Date().toISOString();
-    jobs.push({ path: REPO_FILE, text: JSON.stringify(S.site, null, 2) + "\n", message: commitMessage() });
+    files.push({ path: REPO_FILE, text: JSON.stringify(S.site, null, 2) + "\n" });
   }
-  if (postsDirty()) {
-    S.posts.version = S.posts.version || 1;
-    S.posts.updatedAt = new Date().toISOString();
-    jobs.push({ path: POSTS_FILE, text: JSON.stringify(S.posts, null, 2) + "\n", message: commitMessage() });
-  }
+  if (postsDirty()) files.push({ path: INDEX_FILE, text: indexFileText() });
 
-  if (!jobs.length) {
+  if (S.editing) {
+    const path = postPath(S.editing);
+    const moved = Boolean(S.editingPath) && S.editingPath !== path;
+    if (editingDirty() || moved) {
+      files.push({ path, text: postFileText(S.editing) });
+      if (moved) files.push({ path: S.editingPath, delete: true });
+    }
+  }
+  for (const p of S.deleted) files.push({ path: p, delete: true });
+
+  if (!files.length) {
     toast("没有需要保存的修改");
     return;
   }
 
-  if (S.mode === "local") return saveLocal(jobs);
-
-  if (!S.gh) {
-    toast("还没有连接仓库", "err");
-    return;
-  }
-
+  const message = commitMessage();
   S.busy = true;
   const saveBtn = $('[data-act="save"]');
-  saveBtn?.classList.add("is-busy");
   const old = saveBtn?.innerHTML;
-  if (saveBtn) saveBtn.innerHTML = `${icon("refresh")} 提交中…`;
+  saveBtn?.classList.add("is-busy");
+  if (saveBtn) saveBtn.innerHTML = `${icon("refresh")} ${S.mode === "local" ? "写入中…" : "提交中…"}`;
 
   try {
-    for (const job of jobs) {
-      const res = await putFileWithRetry(S.gh, job.path, job.text, job.message);
-      S.sha[job.path] = res?.content?.sha || "";
-    }
+    const res = await saveRemote(files, message);
 
     S.baseSite = JSON.stringify(S.site);
     S.basePosts = JSON.stringify(S.posts);
+    if (S.editing) {
+      S.editingBase = JSON.stringify(S.editing);
+      S.editingPath = postPath(S.editing);
+    }
+    S.deleted = [];
     updateDirtyBadge();
 
-    // 让公共站点那边也刷新一次数据
-    S.ctx.reload?.();
-    toast("已提交到 GitHub，30–60 秒后生效");
-    if (S.tab === "content" && S.editingId) {
-      S.editingId = null;
-      renderTab();
+    if (S.mode === "local") {
+      await refreshGitBadge();
+      toast(`已写入 ${res?.files || files.length} 个文件，点「提交」生成一次 commit`);
+    } else {
+      S.ctx.reload?.();
+      toast(`已提交（${files.length} 个文件），30–60 秒后生效`);
+      if (S.tab === "content" && S.editingId) {
+        S.editingId = null;
+        S.editing = null;
+        S.editingPath = "";
+        renderTab();
+      }
     }
   } catch (e) {
     toast(e?.message || "提交失败", "err");
@@ -2022,32 +2108,6 @@ async function saveAll() {
     S.busy = false;
     saveBtn?.classList.remove("is-busy");
     if (saveBtn && old) saveBtn.innerHTML = old;
-  }
-}
-
-/* ================================================================ 本地模式：写入与提交 */
-
-async function saveLocal(jobs) {
-  S.busy = true;
-  const btn = $('[data-act="save"]');
-  const old = btn?.innerHTML;
-  btn?.classList.add("is-busy");
-  if (btn) btn.innerHTML = `${icon("refresh")} 写入中…`;
-
-  try {
-    for (const job of jobs) await S.backend.writeFile(job.path, job.text);
-    S.baseSite = JSON.stringify(S.site);
-    S.basePosts = JSON.stringify(S.posts);
-    updateDirtyBadge();
-    await refreshGitBadge();
-    toast("已保存到本地文件，点「提交」生成一次 commit");
-  } catch (e) {
-    toast(e?.message || "写入失败", "err");
-    console.error(e);
-  } finally {
-    S.busy = false;
-    btn?.classList.remove("is-busy");
-    if (btn && old) btn.innerHTML = old;
   }
 }
 
@@ -2064,9 +2124,11 @@ async function refreshGitBadge() {
 }
 
 function defaultCommitMessage(files) {
-  const paths = new Set(files.map((f) => f.path));
-  if (paths.size === 1 && paths.has(POSTS_FILE)) return "更新文章";
-  if (paths.size === 1 && paths.has(REPO_FILE)) return "更新站点设置";
+  const paths = files.map((f) => f.path);
+  const onlyPosts = paths.every((p) => p.startsWith(POSTS_DIR + "/"));
+  const onlySite = paths.every((p) => p === REPO_FILE);
+  if (onlyPosts) return "更新文章";
+  if (onlySite) return "更新站点设置";
   return "更新站点与文章";
 }
 
@@ -2218,7 +2280,9 @@ function bindGlobalEvents() {
             draft: true,
             body: "",
           };
-          S.posts.posts.unshift(p);
+          S.editing = p;
+          S.editingBase = JSON.stringify(p);
+          S.editingPath = "";
           S.editingId = p.id;
           S.pane = window.innerWidth > 1100 ? "split" : "edit";
           renderTab();
@@ -2226,11 +2290,10 @@ function bindGlobalEvents() {
           break;
         }
         case "edit":
-          S.editingId = e.target.closest("[data-id]")?.dataset.id;
-          renderTab();
+          openEditor(e.target.closest("[data-id]")?.dataset.id);
           break;
         case "back-list":
-          if (isDirty()) {
+          if (editingDirty()) {
             confirmDialog({
               title: "还没保存",
               message: "回到列表会丢掉这篇的修改，确定吗？",
@@ -2239,11 +2302,12 @@ function bindGlobalEvents() {
             }).then((ok) => {
               if (!ok) return;
               revertDrafts();
-              S.editingId = null;
               renderTab();
             });
           } else {
             S.editingId = null;
+            S.editing = null;
+            S.editingPath = "";
             renderTab();
           }
           break;
@@ -2252,16 +2316,17 @@ function bindGlobalEvents() {
           break;
         case "del": {
           const id = e.target.closest("[data-id]")?.dataset.id;
-          const p = S.posts.posts.find((x) => x.id === id);
+          const p = S.posts.find((x) => x.id === id);
           if (!p) break;
           confirmDialog({
             title: "删除这篇文章？",
-            message: `「${p.title || "无标题"}」会从仓库里删掉，历史提交里还能找回来。`,
+            message: `「${p.title || "无标题"}」会从仓库里删掉（包括 ${p.path || "对应的文件"}），历史提交里还能找回来。`,
             okText: "删除",
             danger: true,
           }).then(async (ok) => {
             if (!ok) return;
-            S.posts.posts = S.posts.posts.filter((x) => x.id !== id);
+            S.posts = S.posts.filter((x) => x.id !== id);
+            if (p.path) S.deleted.push(p.path);
             updateDirtyBadge();
             await saveAll();
             renderTab();
@@ -2270,7 +2335,7 @@ function bindGlobalEvents() {
         }
         case "pin": {
           const id = e.target.closest("[data-id]")?.dataset.id;
-          const p = S.posts.posts.find((x) => x.id === id);
+          const p = S.posts.find((x) => x.id === id);
           if (!p) break;
           p.pinned = !p.pinned;
           updateDirtyBadge();

@@ -156,6 +156,51 @@ export class GitHub {
     });
   }
 
+  /* 一次提交多个文件（含删除），走 Git Data API：
+     blob → tree → commit → ref，这样「改一篇文章 + 更新索引」只产生一个 commit */
+  async commitFiles(files, message) {
+    const list = (files || []).filter((f) => f && f.path);
+    if (!list.length) return { commit: "", files: 0 };
+
+    const ref = await this.api(`/repos/${this.owner}/${this.repo}/git/ref/heads/${encodeURIComponent(this.branch)}`);
+    const head = ref?.object?.sha;
+    if (!head) throw new GitHubError(500, "拿不到分支的最新提交，可能是空仓库");
+
+    const baseCommit = await this.api(`/repos/${this.owner}/${this.repo}/git/commits/${head}`);
+    const baseTree = baseCommit?.tree?.sha;
+    if (!baseTree) throw new GitHubError(500, "拿不到最新的 tree");
+
+    const tree = [];
+    for (const f of list) {
+      if (f.delete) {
+        tree.push({ path: f.path, mode: "100644", type: "blob", sha: null });
+        continue;
+      }
+      const blob = await this.api(`/repos/${this.owner}/${this.repo}/git/blobs`, {
+        method: "POST",
+        body: JSON.stringify({ content: toB64(f.text), encoding: "base64" }),
+      });
+      tree.push({ path: f.path, mode: "100644", type: "blob", sha: blob.sha });
+    }
+
+    const newTree = await this.api(`/repos/${this.owner}/${this.repo}/git/trees`, {
+      method: "POST",
+      body: JSON.stringify({ base_tree: baseTree, tree }),
+    });
+
+    const commit = await this.api(`/repos/${this.owner}/${this.repo}/git/commits`, {
+      method: "POST",
+      body: JSON.stringify({ message, tree: newTree.sha, parents: [head] }),
+    });
+
+    await this.api(`/repos/${this.owner}/${this.repo}/git/refs/heads/${encodeURIComponent(this.branch)}`, {
+      method: "PATCH",
+      body: JSON.stringify({ sha: commit.sha, force: false }),
+    });
+
+    return { commit: commit.sha, files: list.length };
+  }
+
   /* 检查令牌是否能往这个仓库写 */
   async check() {
     const info = await this.repoInfo();
