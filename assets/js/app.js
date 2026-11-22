@@ -19,6 +19,7 @@ import {
   gamesPageHTML,
   gamePageHTML,
   gameBySlug,
+  GAMES,
   missingHTML,
   published,
   orderedPosts,
@@ -122,7 +123,7 @@ function parseRoute() {
   if (a === "about") return { name: "about", path: "/about" };
   if (a === "music") return { name: "music", path: "/music" };
   if (a === "games") return { name: "games", path: "/games" };
-  if (a === "game" && b) return { name: "game", path: "/games", slug: b };
+  if (a === "game" && b) return { name: "game", path: `/game/${b}`, slug: b };
   if (a === "admin") return { name: "admin", path: "/admin" };
   return { name: "missing", path: `/${a}` };
 }
@@ -829,6 +830,13 @@ function leaveAdmin() {
 async function router() {
   const next = parseRoute();
   const wasAdmin = state.adminMounted || state.route.name === "admin";
+
+  // 只有一个游戏时，#/games 直接进游戏，不再走列表页
+  if (next.name === "games" && GAMES.length === 1) {
+    location.replace(`#/game/${encodeURIComponent(GAMES[0].slug)}`);
+    return;
+  }
+
   state.route = next;
 
   if (next.name === "admin") {

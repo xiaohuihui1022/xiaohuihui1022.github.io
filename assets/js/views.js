@@ -305,8 +305,8 @@ export function archiveHTML({ posts }) {
     : `<div class="empty"><b>还没有文章</b><span>去控制台写下第一篇吧。</span></div>`;
 
   return `
-  <div class="view">
-    <header class="page-head" style="margin:0 auto">
+  <div class="view page" style="--pagew:820px">
+    <header class="page-head">
       <span class="eyebrow">Archive</span>
       <h1 class="page-title">${icon("calendar", "title-i")}全部归档</h1>
       <p class="page-desc">共 ${list.length} 篇文章，按时间倒序排列。慢慢看，不着急。</p>
@@ -320,8 +320,8 @@ export function archiveHTML({ posts }) {
 export function tagsHTML({ posts }) {
   const tags = allTags(posts);
   return `
-  <div class="view">
-    <header class="page-head" style="margin:0 auto">
+  <div class="view page" style="--pagew:820px">
+    <header class="page-head">
       <span class="eyebrow">Tags</span>
       <h1 class="page-title">${icon("tag", "title-i")}标签</h1>
       <p class="page-desc">${tags.length} 个标签，像书架上的一排小盒子。</p>
@@ -344,13 +344,13 @@ export function tagHTML({ posts, tag }) {
     .filter((p) => (p.tags || []).includes(tag))
     .sort(byDateDesc);
   return `
-  <div class="view">
-    <header class="page-head" style="margin:0 auto">
+  <div class="view page" style="--pagew:820px">
+    <header class="page-head">
       <span class="eyebrow">Tag</span>
       <h1 class="page-title">${icon("tag", "title-i")}${escapeHtml(tag)}</h1>
       <p class="page-desc">这个标签下有 ${list.length} 篇文章。</p>
     </header>
-    <div class="post-grid" style="margin-top:36px">
+    <div class="post-grid" style="margin:36px auto 0;max-width:var(--pagew)">
       ${list.map(cardHTML).join("")}
     </div>
     <div style="text-align:center;margin-top:48px">
@@ -377,8 +377,8 @@ export function aboutHTML({ site }) {
     "## 关于这个小站\n\n这里还没有写自我介绍。\n\n你可以打开 [控制台](#/admin)，在「站点」里填写这一段文字。";
 
   return `
-  <div class="view">
-    <header class="page-head" style="margin:0 auto">
+  <div class="view page">
+    <header class="page-head">
       <span class="eyebrow">About</span>
       <h1 class="page-title">${icon("heart", "title-i")}关于</h1>
       <p class="page-desc">${escapeHtml(s.description || "")}</p>
@@ -482,8 +482,8 @@ export function musicPageHTML({ site }) {
     : `<div class="empty"><b>还没有添加音乐</b><span>去控制台的「音乐」里加一首吧。</span></div>`;
 
   return `
-  <div class="view">
-    <header class="page-head" style="margin:0 auto">
+  <div class="view page" style="--pagew:900px">
+    <header class="page-head">
       <span class="eyebrow">Music</span>
       <h1 class="page-title">${icon("music", "title-i")}${escapeHtml(title)}</h1>
       <p class="page-desc">${escapeHtml(m.desc || "一些最近在循环的歌。点播放可以直接在网页里听。")}</p>
@@ -517,8 +517,8 @@ export function gameBySlug(slug) {
 
 export function gamesPageHTML() {
   return `
-  <div class="view">
-    <header class="page-head" style="margin:0 auto">
+  <div class="view page" style="--pagew:900px">
+    <header class="page-head">
       <span class="eyebrow">Games</span>
       <h1 class="page-title">${icon("gamepad", "title-i")}小游戏</h1>
       <p class="page-desc">写代码写累了，来这里玩两分钟。</p>
@@ -548,7 +548,9 @@ export function gamePageHTML(slug) {
   return `
   <div class="game-view">
     <div class="game-bar">
-      <a class="btn btn-line btn-sm" href="#/games">${icon("arrow-left")} 全部游戏</a>
+      <a class="btn btn-line btn-sm" href="${GAMES.length > 1 ? "#/games" : "#/"}">${icon("arrow-left")} ${
+    GAMES.length > 1 ? "全部游戏" : "返回首页"
+  }</a>
       <b>${escapeHtml(game.title)}</b>
       <a class="btn btn-line btn-sm" href="${safeUrl(game.file, "#/games")}" target="_blank" rel="noopener noreferrer">
         ${icon("external")} 新标签打开
@@ -604,8 +606,9 @@ export function applyChrome(site, { mode = "light" } = {}) {
     if (musicEnabled(site) && !items.some((x) => String(x?.to || "") === "/music")) {
       items.push({ label: "音乐", to: "/music" });
     }
-    if (GAMES.length && !items.some((x) => String(x?.to || "") === "/games")) {
-      items.push({ label: "游戏", to: "/games" });
+    if (GAMES.length && !items.some((x) => ["/games", `/game/${GAMES[0].slug}`].includes(String(x?.to || "")))) {
+      // 只有一个游戏时直接进游戏页，不做列表
+      items.push({ label: "游戏", to: GAMES.length === 1 ? `/game/${GAMES[0].slug}` : "/games" });
     }
     nav.innerHTML = items
       .filter((x) => x && x.label)

@@ -963,7 +963,14 @@ a.chip:hover { border-color: var(--accent-line); background: color-mix(in srgb, 
 /* --------------------------------------------------------------------------
    10. 归档 / 标签 / 关于
    -------------------------------------------------------------------------- */
-.page-head { padding: 56px 0 12px; max-width: var(--prose); }
+/* 页面级容器：页头和内容共用同一个宽度，保证左边对齐 */
+.page { --pagew: var(--prose); }
+.page-head {
+  padding: 56px 0 12px;
+  max-width: var(--pagew);
+  margin-left: auto;
+  margin-right: auto;
+}
 .page-title {
   font-family: var(--font-display);
   font-size: clamp(28px, 3.4vw, 36px);
@@ -975,7 +982,7 @@ a.chip:hover { border-color: var(--accent-line); background: color-mix(in srgb, 
 }
 .page-desc { color: var(--text-2); font-size: 14.5px; line-height: 1.9; max-width: 52ch; }
 
-.archive { max-width: 820px; margin: 40px auto 0; }
+.archive { max-width: var(--pagew, 820px); margin: 40px auto 0; }
 .year-group { margin-bottom: 44px; }
 .year-title {
   display: flex;
@@ -1018,7 +1025,7 @@ a.chip:hover { border-color: var(--accent-line); background: color-mix(in srgb, 
   flex-wrap: wrap;
   gap: 12px;
   margin: 40px auto;
-  max-width: 820px;
+  max-width: var(--pagew, 820px);
 }
 .tag-pill {
   display: inline-flex;
@@ -1355,14 +1362,17 @@ kbd {
    -------------------------------------------------------------------------- */
 .music-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 16px;
 }
 .music-list {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 16px;
   margin-top: 24px;
+  max-width: var(--pagew, 900px);
+  margin-left: auto;
+  margin-right: auto;
 }
 .song {
   display: flex;
@@ -1462,7 +1472,7 @@ kbd {
 .music-inline .song { box-shadow: none; }
 .prose .music-inline .song-info b a { text-decoration: none; }
 
-.music-page { max-width: 900px; margin: 32px auto 0; }
+.music-page { max-width: var(--pagew, 900px); margin: 32px auto 0; }
 .music-note {
   display: flex;
   gap: 8px;
@@ -1474,6 +1484,9 @@ kbd {
 }
 .music-note .i { width: 15px; height: 15px; margin-top: 2px; flex: none; }
 
+@media (max-width: 980px) {
+  .music-list { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
 @media (max-width: 760px) {
   .music-grid, .music-list { grid-template-columns: 1fr; }
   .music-page { margin-top: 22px; }
@@ -1487,6 +1500,9 @@ kbd {
   grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
   gap: 18px;
   margin-top: 34px;
+  max-width: var(--pagew, 900px);
+  margin-left: auto;
+  margin-right: auto;
 }
 .game-card {
   display: flex;
