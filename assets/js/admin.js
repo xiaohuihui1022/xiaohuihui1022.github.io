@@ -850,6 +850,7 @@ function editorHTML() {
         <button data-md="link" title="链接">${icon("link")}</button>
         <button data-md="image" title="插入图片">${icon("image")}</button>
         <button data-md="music" title="插入音乐卡片">${icon("music")}</button>
+        <button data-md="color" title="文字颜色" class="tb-color">A</button>
         <div class="spacer"></div>
         <button data-md="preview-toggle" title="刷新预览">${icon("eye")}</button>
       </div>
@@ -986,7 +987,7 @@ function wireEditor() {
   $("#md-toolbar").addEventListener("click", (e) => {
     const btn = e.target.closest("[data-md]");
     if (!btn) return;
-    mdAction(btn.dataset.md, ta, { refresh, sync });
+    mdAction(btn.dataset.md, ta, { refresh, sync, btn });
   });
 
   $("#pane-seg")?.addEventListener("click", (e) => {
@@ -1023,6 +1024,128 @@ function wireEditor() {
     }
     e.target.value = "";
   });
+}
+
+/* 行内字色：{rose|文字} / {#e5849e|文字} */
+const COLOR_PALETTE = [
+  { id: "rose", name: "粉", hex: "#e5849e" },
+  { id: "violet", name: "紫", hex: "#b9a4e3" },
+  { id: "mint", name: "绿", hex: "#6cc3a9" },
+  { id: "sky", name: "蓝", hex: "#6f9fe0" },
+  { id: "amber", name: "黄", hex: "#d9a441" },
+  { id: "cherry", name: "红", hex: "#d9687c" },
+  { id: "gray", name: "灰", hex: "#8d8496" },
+  { id: "ink", name: "墨", hex: "#40394a" },
+];
+
+function wrapSelection(ta, before, after, placeholder) {
+  const s = ta.selectionStart;
+  const e = ta.selectionEnd;
+  const sel = ta.value.slice(s, e) || placeholder || "";
+  ta.setRangeText(before + sel + after, s, e, "end");
+  ta.selectionStart = s + before.length;
+  ta.selectionEnd = s + before.length + sel.length;
+  ta.focus();
+}
+
+let colorPopEl = null;
+let colorPopCleanup = null;
+
+function closeColorPicker() {
+  if (colorPopCleanup) {
+    colorPopCleanup();
+    colorPopCleanup = null;
+  }
+  if (colorPopEl) {
+    colorPopEl.remove();
+    colorPopEl = null;
+  }
+}
+
+function openColorPicker(btn, ta, { refresh, sync }) {
+  closeColorPicker();
+  if (!btn) return;
+
+  const pop = document.createElement("div");
+  pop.className = "color-pop";
+  pop.innerHTML = `
+    <div class="color-pop-title">文字颜色</div>
+    <div class="color-pop-row">
+      ${COLOR_PALETTE.map(
+        (c) =>
+          `<button type="button" class="color-dot" data-color="${c.id}" title="${c.name}" style="--c:${c.hex}"></button>`
+      ).join("")}
+    </div>
+    <div class="color-pop-foot">
+      <label class="color-custom-inline">
+        <input type="color" id="color-custom" value="#e5849e" />
+        <span>自定义</span>
+      </label>
+      <button type="button" class="color-clear" data-color-clear="1">去掉颜色</button>
+    </div>`;
+
+  document.body.appendChild(pop);
+  const rect = btn.getBoundingClientRect();
+  const width = pop.offsetWidth || 240;
+  pop.style.top = `${Math.round(rect.bottom + 8)}px`;
+  pop.style.left = `${Math.round(Math.max(12, Math.min(rect.left, window.innerWidth - width - 12)))}px`;
+  colorPopEl = pop;
+
+  const apply = (token) => {
+    wrapSelection(ta, `{${token}|`, "}", "文字");
+    sync();
+    refresh();
+    closeColorPicker();
+  };
+
+  pop.addEventListener("click", (e) => {
+    e.stopPropagation();
+    const dot = e.target.closest("[data-color]");
+    if (dot) return apply(dot.dataset.color);
+    if (e.target.closest("[data-color-clear]")) {
+      stripColor(ta);
+      sync();
+      refresh();
+      return closeColorPicker();
+    }
+  });
+
+  pop.querySelector("#color-custom")?.addEventListener("change", (e) => {
+    const hex = String(e.target.value || "").toLowerCase();
+    if (/^#[0-9a-f]{6}$/.test(hex)) apply(hex);
+  });
+
+  const onDocClick = (e) => {
+    if (pop.contains(e.target) || btn.contains(e.target)) return;
+    closeColorPicker();
+  };
+  const onKey = (e) => {
+    if (e.key === "Escape") closeColorPicker();
+  };
+  // 稍微延后绑定，避免当前这次点击立刻把它关掉
+  setTimeout(() => {
+    document.addEventListener("click", onDocClick);
+    document.addEventListener("keydown", onKey);
+  }, 0);
+
+  colorPopCleanup = () => {
+    document.removeEventListener("click", onDocClick);
+    document.removeEventListener("keydown", onKey);
+  };
+}
+
+/* 把选区最外层的 {token|...} 去掉 */
+function stripColor(ta) {
+  const s = ta.selectionStart;
+  const e = ta.selectionEnd;
+  const sel = ta.value.slice(s, e);
+  const m = /^\{[#a-zA-Z0-9]{2,12}\|([\s\S]*)\}$/.exec(sel);
+  if (!m) {
+    toast("先选中整段带颜色的文字（包括 { }）");
+    return;
+  }
+  ta.setRangeText(m[1], s, e, "end");
+  ta.focus();
 }
 
 /* 正文里插入音乐卡片 */
@@ -1099,7 +1222,7 @@ function insertAtCursor(ta, text) {
   ta.dispatchEvent(new Event("input", { bubbles: true }));
 }
 
-function mdAction(action, ta, { refresh, sync }) {
+function mdAction(action, ta, { refresh, sync, btn }) {
   const wrap = (before, after, ph) => {
     const s = ta.selectionStart;
     const e = ta.selectionEnd;
@@ -1154,6 +1277,8 @@ function mdAction(action, ta, { refresh, sync }) {
       return $("#inline-file")?.click();
     case "music":
       return openMusicPicker(ta, { refresh, sync });
+    case "color":
+      return openColorPicker(btn, ta, { refresh, sync });
     case "preview-toggle":
       refresh();
       return toast("预览已刷新");

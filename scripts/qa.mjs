@@ -381,6 +381,26 @@ async function main() {
   step("编辑器实时预览 Markdown", previewText.includes("小标题") && previewText.includes("行内代码"));
   step("预览支持表格", (await page.locator("#md-preview-body table").count()) === 1);
   step("正文里的 {{music:ID}} 会渲染成卡片", (await page.locator("#md-preview-body .music-inline .song").count()) === 1);
+
+  // 字色
+  await page.locator("#md-input").evaluate((el) => {
+    const i = el.value.indexOf("这是");
+    el.focus();
+    el.setSelectionRange(i, i + 2);
+  });
+  await page.click('[data-md="color"]');
+  await page.waitForSelector(".color-pop");
+  await page.click('.color-pop [data-color="rose"]');
+  await page.waitForTimeout(350);
+  const coloredValue = await page.locator("#md-input").inputValue();
+  step("工具栏能给选区加上颜色", coloredValue.includes("{rose|这是}"), coloredValue.slice(0, 22));
+  const colorInfo = await page.evaluate(() => {
+    const el = document.querySelector("#md-preview-body .md-color");
+    if (!el) return null;
+    const p = el.closest("p") || el.parentElement;
+    return { c: getComputedStyle(el).color, p: getComputedStyle(p).color };
+  });
+  step("字色在预览里生效且与正文不同", Boolean(colorInfo) && colorInfo.c !== colorInfo.p, colorInfo?.c || "无");
   await shot("10-admin-editor.png");
 
   // 选「发布」再保存；故意让第一次 PUT 返回 409，验证会自动重新取 sha 再提交

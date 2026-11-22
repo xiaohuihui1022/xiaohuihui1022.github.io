@@ -7,6 +7,9 @@ import { escapeHtml, safeUrl, slugify } from "./core.js";
 
 const MARK = "\u0000";
 
+/* 可用的字色名，和 CSS 里的 .c-* 一一对应 */
+export const COLOR_NAMES = ["rose", "violet", "mint", "sky", "amber", "cherry", "gray", "ink"];
+
 function unmark(html, stash) {
   let out = html;
   let guard = 0;
@@ -65,6 +68,17 @@ export function inline(text) {
   s = s.replace(/~~([^~]+)~~/g, "<del>$1</del>");
   s = s.replace(/(^|[^*])\*([^*\n]+)\*(?!\*)/g, "$1<em>$2</em>");
   s = s.replace(/(^|[^\w_])_([^_\n]+)_(?![\w_])/g, "$1<em>$2</em>");
+
+  // 字色：{rose|文字} 或 {#e5849e|文字}
+  // 放在强调之后，这样里面可以嵌 **加粗** 之类
+  s = s.replace(/\{([#a-zA-Z0-9]{2,12})\|([^{}\n]+)\}/g, (whole, token, text) => {
+    const name = String(token).toLowerCase();
+    if (COLOR_NAMES.includes(name)) return `<span class="md-color c-${name}">${text}</span>`;
+    if (/^#([0-9a-f]{3}|[0-9a-f]{6}|[0-9a-f]{8})$/i.test(token)) {
+      return `<span class="md-color" style="--c:${token.toLowerCase()}">${text}</span>`;
+    }
+    return whole;
+  });
 
   // 行尾两空格或反斜杠 → 硬换行
   s = s.replace(/ {2,}\n/g, "<br />\n").replace(/\\\n/g, "<br />\n");

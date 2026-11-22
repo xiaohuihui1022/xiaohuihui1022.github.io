@@ -915,6 +915,18 @@ a.chip:hover { border-color: var(--accent-line); background: color-mix(in srgb, 
 .copy-code:hover { color: var(--accent-text); }
 .copy-code .i { width: 13px; height: 13px; }
 
+/* 行内字色：{rose|文字} */
+.md-color { color: color-mix(in srgb, var(--c, var(--accent)) 72%, var(--text)); }
+[data-mode="dark"] .md-color { color: color-mix(in srgb, var(--c, var(--accent)) 76%, #ffffff); }
+.md-color.c-rose { --c: #e5849e; }
+.md-color.c-violet { --c: #b9a4e3; }
+.md-color.c-mint { --c: #6cc3a9; }
+.md-color.c-sky { --c: #6f9fe0; }
+.md-color.c-amber { --c: #d9a441; }
+.md-color.c-cherry { --c: #d9687c; }
+.md-color.c-gray { --c: #8d8496; }
+.md-color.c-ink { --c: var(--text); }
+
 .prose table {
   width: 100%;
   margin: 1.7em 0;

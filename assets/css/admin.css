@@ -568,6 +568,64 @@ kbd.code { font-family: var(--font-mono); font-size: 11.5px; padding: 2px 6px; b
   100% { transform: translateX(340%); }
 }
 
+/* 文字颜色选择器 */
+.tb-color {
+  font-weight: 700;
+  background: linear-gradient(90deg, #e5849e, #b9a4e3, #6cc3a9);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+.color-pop {
+  position: fixed;
+  z-index: 520;
+  width: 236px;
+  padding: 14px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  box-shadow: var(--shadow-2);
+  animation: colorIn 0.18s ease both;
+}
+@keyframes colorIn {
+  from { opacity: 0; transform: translateY(-6px); }
+  to { opacity: 1; transform: none; }
+}
+.color-pop-title { font-size: 11.5px; letter-spacing: 0.08em; color: var(--text-3); margin-bottom: 10px; }
+.color-pop-row { display: flex; flex-wrap: wrap; gap: 8px; }
+.color-dot {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--c);
+  border: 2px solid var(--surface);
+  box-shadow: 0 0 0 1px var(--line);
+  transition: transform 0.15s;
+}
+.color-dot:hover { transform: scale(1.15); }
+.color-pop-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid var(--line-soft);
+}
+.color-custom-inline { display: inline-flex; align-items: center; gap: 6px; font-size: 11.5px; color: var(--text-3); cursor: pointer; }
+.color-custom-inline input[type="color"] {
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: 2px solid var(--surface);
+  border-radius: 50%;
+  box-shadow: 0 0 0 1px var(--line);
+  background: none;
+  cursor: pointer;
+}
+.color-clear { font-size: 11.5px; color: var(--text-3); text-decoration: underline; text-underline-offset: 3px; }
+.color-clear:hover { color: var(--accent-text); }
+
 /* 提交对话框 */
 .git-n { font-family: var(--font-display); font-size: 11px; opacity: 0.85; }
 .btn.has-changes { box-shadow: 0 0 0 3px var(--accent-soft); }

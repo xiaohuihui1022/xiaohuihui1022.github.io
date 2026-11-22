@@ -151,6 +151,8 @@ export function truncate(text, len = 110) {
     .replace(/```[\s\S]*?```/g, " ")
     .replace(/!\[[^\]]*\]\([^)]*\)/g, " ")
     .replace(/\[([^\]]*)\]\([^)]*\)/g, "$1")
+    .replace(/\{[#a-zA-Z0-9]{2,12}\|([^{}]*)\}/g, "$1") // {rose|文字} → 文字
+    .replace(/\{\{\s*music\s*:\s*\d+\s*\}\}/g, " ")
     .replace(/[#>*_`~]/g, "")
     .replace(/\s+/g, " ")
     .trim();
