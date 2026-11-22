@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updatedAt": "2026-11-22T07:40:18.056Z",
+  "updatedAt": "2026-11-22T08:22:06.869Z",
   "site": {
     "title": "灰灰の小站",
     "subtitle": "把喜欢的事，慢慢写下来",
@@ -72,11 +72,24 @@
     }
   },
   "music": {
-    "songs": [],
+    "songs": [
+      {
+        "id": "1824473220",
+        "name": "Believe in you",
+        "artist": "nonoc",
+        "cover": "https://p1.music.126.net/Zx-Yp9yj6B8QfsnNq6PpTw==/109951171350940726.jpg"
+      },
+      {
+        "id": "1812289601",
+        "name": "Long shot",
+        "artist": "前島麻由",
+        "cover": "https://p2.music.126.net/jz3Vsw0eHPoH_9uEkzE4UQ==/109951171350941158.jpg"
+      }
+    ],
     "enabled": true,
     "title": "The Best",
     "desc": "好听(OuO)",
     "playlistId": "7384210991",
-    "embed": true
+    "embed": false
   }
 }
