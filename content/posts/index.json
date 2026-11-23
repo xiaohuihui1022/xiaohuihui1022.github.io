@@ -1,7 +1,25 @@
 {
   "version": 2,
-  "updatedAt": "2026-11-22T09:09:38.605Z",
+  "updatedAt": "2026-11-23T11:44:26.359Z",
   "posts": [
+    {
+      "id": "p_mwt6t5q7ehhv7l",
+      "slug": "day2",
+      "title": "无标题",
+      "date": "2026-11-23",
+      "tags": [
+        "随笔",
+        "音游"
+      ],
+      "cover": "assets/uploads/day2-rks16-mwt6uo6k.webp",
+      "excerpt": "就在今天，我达到了RKS16！！！",
+      "pinned": false,
+      "draft": true,
+      "path": "content/posts/随笔/day2.json",
+      "readingTime": 3,
+      "words": 1771,
+      "updatedAt": ""
+    },
     {
       "id": "p_mwrku2vq9rl2n5",
       "slug": "day1",
